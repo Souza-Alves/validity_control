@@ -1,2 +1,0 @@
-/Users/ramon/Documents/lab/validity_control/build/.cxx/release/68dw3z61/arm64-v8a/CMakeFiles/edit_cache.dir
-/Users/ramon/Documents/lab/validity_control/build/.cxx/release/68dw3z61/arm64-v8a/CMakeFiles/rebuild_cache.dir

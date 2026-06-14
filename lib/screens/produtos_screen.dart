@@ -1,4 +1,11 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
+import 'package:flutter/services.dart';
+import 'package:open_filex_plus/open_filex_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/produto.dart';
 import '../models/local.dart';
@@ -10,10 +17,10 @@ class ProdutosScreen extends StatefulWidget {
   const ProdutosScreen({super.key});
 
   @override
-  State<ProdutosScreen> createState() => _ProdutosScreenState();
+  State<ProdutosScreen> createState() => ProdutosScreenState();
 }
 
-class _ProdutosScreenState extends State<ProdutosScreen>
+class ProdutosScreenState extends State<ProdutosScreen>
     with AutomaticKeepAliveClientMixin {
   List<Produto> _produtos = [];
   List<Local> _locais = [];
@@ -23,8 +30,11 @@ class _ProdutosScreenState extends State<ProdutosScreen>
   String _diasFiltro = '';
   String _sortField = 'validade';
   bool _sortAsc = true;
+  bool _loading = true;
   final _dataInicialCtrl = TextEditingController();
   final _dataFinalCtrl = TextEditingController();
+  final GlobalKey _captureKey = GlobalKey();
+  static const _cameraSaverChannel = MethodChannel('camera_image_saver');
 
   @override
   bool get wantKeepAlive => true;
@@ -32,6 +42,7 @@ class _ProdutosScreenState extends State<ProdutosScreen>
   @override
   void initState() {
     super.initState();
+    dataChanged.addListener(_handleDataChanged);
     _loadData();
   }
 
@@ -41,10 +52,24 @@ class _ProdutosScreenState extends State<ProdutosScreen>
     _loadData();
   }
 
+  void _handleDataChanged() {
+    if (mounted) refresh();
+  }
+
+  Future<void> refresh() async {
+    await _loadData();
+  }
+
   Future<void> _loadData() async {
+    if (mounted && _produtos.isEmpty) setState(() => _loading = true);
     final prods = await getProdutos();
     final locs = await getLocais();
-    if (mounted) setState(() { _produtos = prods; _locais = locs; });
+    if (mounted)
+      setState(() {
+        _produtos = prods;
+        _locais = locs;
+        _loading = false;
+      });
   }
 
   bool _isLocalAtivo(Produto p) {
@@ -61,7 +86,10 @@ class _ProdutosScreenState extends State<ProdutosScreen>
     return _produtos.where((p) {
       if (!_isLocalAtivo(p)) return false;
       if (_filtrosLocal.isNotEmpty) {
-        if (!_filtrosLocal.any((f) => p.localNome.toLowerCase() == f.toLowerCase())) return false;
+        if (!_filtrosLocal.any(
+          (f) => p.localNome.toLowerCase() == f.toLowerCase(),
+        ))
+          return false;
       }
       if (_dataInicial.isNotEmpty && _dataFinal.isNotEmpty) {
         return du.isInRange(p.validade, _dataInicial, _dataFinal);
@@ -137,34 +165,69 @@ class _ProdutosScreenState extends State<ProdutosScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Localizacao:', style: TextStyle(fontSize: 13, color: Color(0xFF666666))),
+                const Text(
+                  'Localizacao:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
-                  initialValue: locaisAtivos.any((l) => l.id == editLocalId) ? editLocalId : null,
+                  initialValue: locaisAtivos.any((l) => l.id == editLocalId)
+                      ? editLocalId
+                      : null,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                   ),
-                  items: locaisAtivos.map((l) => DropdownMenuItem(value: l.id, child: Text(l.nome))).toList(),
+                  items: locaisAtivos
+                      .map(
+                        (l) =>
+                            DropdownMenuItem(value: l.id, child: Text(l.nome)),
+                      )
+                      .toList(),
                   onChanged: (v) {
                     final loc = locaisAtivos.firstWhere((l) => l.id == v);
-                    setDialogState(() { editLocalId = loc.id; editLocalNome = loc.nome; });
+                    setDialogState(() {
+                      editLocalId = loc.id;
+                      editLocalNome = loc.nome;
+                    });
                   },
                 ),
                 const SizedBox(height: 12),
-                const Text('Produto:', style: TextStyle(fontSize: 13, color: Color(0xFF666666))),
+                const Text(
+                  'Produto:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
                 const SizedBox(height: 4),
                 TextFormField(
                   initialValue: editNome,
-                  decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
                   onChanged: (v) => editNome = v,
                 ),
                 const SizedBox(height: 12),
-                const Text('Validade:', style: TextStyle(fontSize: 13, color: Color(0xFF666666))),
+                const Text(
+                  'Validade:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
                 const SizedBox(height: 4),
                 TextFormField(
                   initialValue: editValidade,
-                  decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'DD/MM/AAAA', contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'DD/MM/AAAA',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
                   keyboardType: TextInputType.number,
                   maxLength: 10,
                   onChanged: (v) {
@@ -173,20 +236,39 @@ class _ProdutosScreenState extends State<ProdutosScreen>
                   },
                 ),
                 const SizedBox(height: 12),
-                const Text('Quantidade:', style: TextStyle(fontSize: 13, color: Color(0xFF666666))),
+                const Text(
+                  'Quantidade:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
                 const SizedBox(height: 4),
                 TextFormField(
                   initialValue: editQuantidade,
-                  decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
                   keyboardType: TextInputType.number,
                   onChanged: (v) => editQuantidade = v,
                 ),
                 const SizedBox(height: 12),
-                const Text('Situacao:', style: TextStyle(fontSize: 13, color: Color(0xFF666666))),
+                const Text(
+                  'Situacao:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
                   initialValue: editSituacao.isEmpty ? null : editSituacao,
-                  decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
                   hint: const Text('Selecione'),
                   items: const [
                     DropdownMenuItem(value: '', child: Text('Nenhum')),
@@ -199,93 +281,285 @@ class _ProdutosScreenState extends State<ProdutosScreen>
                   }),
                 ),
                 const SizedBox(height: 12),
-                Text('Status:', style: TextStyle(fontSize: 13, color: editSituacao == 'Vencido' ? const Color(0xFF666666) : const Color(0xFFBBBBBB))),
+                Text(
+                  'Status:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: editSituacao == 'Vencido'
+                        ? const Color(0xFF666666)
+                        : const Color(0xFFBBBBBB),
+                  ),
+                ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
                   initialValue: editStatus.isEmpty ? null : editStatus,
+                  isExpanded: true,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     enabled: editSituacao == 'Vencido',
                   ),
-                  hint: Text(editSituacao == 'Vencido' ? 'Selecione' : 'Disponivel apenas para Vencido'),
+                  hint: Text(
+                    editSituacao == 'Vencido'
+                        ? 'Selecione'
+                        : 'Disponivel apenas para Vencido',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   items: editSituacao == 'Vencido'
                       ? const [
                           DropdownMenuItem(value: '', child: Text('Nenhum')),
-                          DropdownMenuItem(value: 'Baixado', child: Text('Baixado')),
-                          DropdownMenuItem(value: 'Pendente', child: Text('Pendente')),
+                          DropdownMenuItem(
+                            value: 'Baixado',
+                            child: Text('Baixado'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Pendente',
+                            child: Text('Pendente'),
+                          ),
                         ]
                       : null,
-                  onChanged: editSituacao == 'Vencido' ? (v) => setDialogState(() => editStatus = v ?? '') : null,
+                  onChanged: editSituacao == 'Vencido'
+                      ? (v) => setDialogState(() => editStatus = v ?? '')
+                      : null,
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.white, backgroundColor: const Color(0xFFE74C3C)),
-              onPressed: () {
-                showDialog(
-                  context: ctx,
-                  builder: (c) => AlertDialog(
-                    title: const Text('Confirmar exclusao'),
-                    content: Text('Deseja remover "${produto.nome}"?'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancelar')),
-                      TextButton(
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
-                        onPressed: () async {
-                          await deleteProduto(produto.id);
-                          if (c.mounted) Navigator.pop(c);
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          _loadData();
-                        },
-                        child: const Text('Remover'),
+            Align(
+              alignment: Alignment.centerRight,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimaryColor,
+                        foregroundColor: Colors.white,
                       ),
-                    ],
-                  ),
-                );
-              },
-              child: const Text('Remover'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor, foregroundColor: Colors.white),
-              onPressed: () async {
-                if (editNome.trim().isEmpty) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Nome do produto e obrigatorio.')));
-                  return;
-                }
-                if (editValidade.trim().isEmpty) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Data de validade e obrigatoria.')));
-                  return;
-                }
-                final qty = int.tryParse(editQuantidade);
-                if (qty == null || qty < 0) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Quantidade invalida.')));
-                  return;
-                }
-                await updateProduto(produto.copyWith(
-                  localId: editLocalId,
-                  localNome: editLocalNome,
-                  nome: editNome,
-                  validade: editValidade,
-                  quantidade: qty,
-                  situacao: editSituacao,
-                  status: editSituacao == 'Vencido' ? editStatus : '',
-                ));
-                if (ctx.mounted) Navigator.pop(ctx);
-                _loadData();
-              },
-              child: const Text('Salvar'),
+                      onPressed: () async {
+                        if (editNome.trim().isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Nome do produto e obrigatorio.'),
+                            ),
+                          );
+                          return;
+                        }
+                        if (editValidade.trim().isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Data de validade e obrigatoria.'),
+                            ),
+                          );
+                          return;
+                        }
+                        final qty = int.tryParse(editQuantidade);
+                        if (qty == null || qty < 0) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Quantidade invalida.'),
+                            ),
+                          );
+                          return;
+                        }
+                        await updateProduto(
+                          produto.copyWith(
+                            localId: editLocalId,
+                            localNome: editLocalNome,
+                            nome: editNome,
+                            validade: editValidade,
+                            quantidade: qty,
+                            situacao: editSituacao,
+                            status: editSituacao == 'Vencido' ? editStatus : '',
+                          ),
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        _loadData();
+                      },
+                      child: const FittedBox(child: Text('Salvar')),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFFE74C3C),
+                      ),
+                      onPressed: () {
+                        showDialog(
+                          context: ctx,
+                          builder: (c) => AlertDialog(
+                            title: const Text('Confirmar remoção'),
+                            content: Text(
+                              'Deseja remover o produto "${produto.nome}"?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(c),
+                                child: const FittedBox(child: Text('Cancelar')),
+                              ),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                ),
+                                onPressed: () async {
+                                  await deleteProduto(produto.id);
+                                  if (c.mounted) Navigator.pop(c);
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  _loadData();
+                                },
+                                child: const FittedBox(child: Text('Remover')),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: const FittedBox(child: Text('Remover')),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const FittedBox(child: Text('Cancelar')),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _escapeHtml(String value) {
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+  }
+
+  Future<void> _salvarPrintTela() async {
+    final contextBox = _captureKey.currentContext;
+    final renderObject = contextBox?.findRenderObject();
+    if (renderObject == null || renderObject is! RenderRepaintBoundary) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nao foi possivel capturar a lista.')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final image = await renderObject.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw Exception('Sem dados da imagem');
+      }
+
+      final savedUri = await _cameraSaverChannel.invokeMethod<String>(
+        'saveImageToCamera',
+        {
+          'imageBytes': byteData.buffer.asUint8List(),
+          'quality': 100,
+          'name': 'controle_validades_${DateTime.now().millisecondsSinceEpoch}',
+        },
+      );
+
+      if (mounted) {
+        if (savedUri != null && savedUri.isNotEmpty) {
+          final filePath = savedUri;
+          final shouldOpenGallery = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Imagem salva'),
+              content: const Text('Deseja abrir a imagem salva na galeria?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Nao'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Sim'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldOpenGallery == true &&
+              filePath != null &&
+              filePath.isNotEmpty) {
+            try {
+              final result = await OpenFilex.open(filePath);
+              if (result.type == ResultType.done) {
+                return;
+              }
+            } catch (_) {}
+
+            if (Platform.isAndroid) {
+              try {
+                final uri =
+                    filePath.startsWith('content://') ||
+                        filePath.startsWith('file://')
+                    ? Uri.parse(filePath)
+                    : Uri.file(filePath);
+                final intent = AndroidIntent(
+                  action: 'android.intent.action.VIEW',
+                  data: uri.toString(),
+                  type: 'image/*',
+                );
+                await intent.launch();
+                return;
+              } catch (_) {}
+            }
+
+            try {
+              final galleryUri = Uri.parse(
+                'content://media/external/images/media',
+              );
+              if (await canLaunchUrl(galleryUri)) {
+                await launchUrl(
+                  galleryUri,
+                  mode: LaunchMode.externalApplication,
+                );
+                return;
+              }
+            } catch (_) {}
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Imagem salva. Você pode encontrá-la na galeria.',
+                  ),
+                ),
+              );
+            }
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Nao foi possivel salvar a imagem.')),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nao foi possivel salvar a imagem.')),
+        );
+      }
+    }
   }
 
   Future<void> _enviarEmail() async {
@@ -296,29 +570,158 @@ class _ProdutosScreenState extends State<ProdutosScreen>
     final itens = _produtos.where((p) {
       final d = du.parseDate(p.validade);
       return d != null && !d.isBefore(todayStart) && !d.isAfter(futureDate);
-    }).toList()
-      ..sort((a, b) => a.localNome.compareTo(b.localNome));
+    }).toList()..sort((a, b) => a.localNome.compareTo(b.localNome));
 
     if (itens.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nenhum produto com vencimento nos proximos 4 dias.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nenhum produto com vencimento nos proximos 4 dias.'),
+          ),
+        );
       }
       return;
     }
 
-    var body = 'Produtos proximos ao vencimento:\n\n';
-    body += 'Local | Qtd | Produto | Validade | Situacao | Status\n';
-    body += '------|-----|---------|----------|----------|-------\n';
+    final buffer = StringBuffer();
+    buffer.writeln(
+      '<html><body style="font-family: Arial, sans-serif; color: #222; line-height: 1.4;">',
+    );
+    buffer.writeln('<p><strong>Produtos proximos ao vencimento:</strong></p>');
+    buffer.writeln(
+      '<p style="margin: 0 0 8px 0;">Gerado em ${du.formatDate(todayStart)}</p>',
+    );
+    buffer.writeln(
+      '<table style="border-collapse: collapse; width: 100%; font-size: 12px;">',
+    );
+    buffer.writeln(
+      '<tr style="background-color: #f4f4f4;"><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Local</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Qtd</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Produto</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Validade</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Situacao</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Status</th></tr>',
+    );
     for (final p in itens) {
-      body += '${p.localNome} | ${p.quantidade} | ${p.nome} | ${p.validade} | ${p.situacao.isEmpty ? '-' : p.situacao} | ${p.status.isEmpty ? '-' : p.status}\n';
+      buffer.writeln('<tr>');
+      buffer.writeln(
+        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.localNome)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border: 1px solid #ccc; padding: 6px;">${p.quantidade}</td>',
+      );
+      buffer.writeln(
+        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.nome)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.validade)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
+      );
+      buffer.writeln('</tr>');
     }
+    buffer.writeln('</table>');
+    buffer.writeln(
+      '<p style="margin-top: 10px;"><strong>Total:</strong> ${itens.length} produto(s)</p>',
+    );
+    buffer.writeln('</body></html>');
 
-    final subject = 'Controle de Validades - Produtos proximos ao vencimento (${du.formatDate(todayStart)})';
-    final uri = Uri(scheme: 'mailto', queryParameters: {'subject': subject, 'body': body});
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Servico de email nao disponivel.')));
+    final body = buffer.toString();
+    final plainTextBody = [
+      'Controle de Validades',
+      'Produtos proximos ao vencimento',
+      'Gerado em ${du.formatDate(todayStart)}',
+      '',
+      'Local | Qtd | Produto | Validade | Situacao | Status',
+      for (final p in itens)
+        '${p.localNome} | ${p.quantidade} | ${p.nome} | ${p.validade} | ${p.situacao.isEmpty ? '-' : p.situacao} | ${p.status.isEmpty ? '-' : p.status}',
+      '',
+      'Total: ${itens.length} produto(s)',
+    ].join('\n');
+    final subject =
+        'Controle de Validades - Produtos proximos ao vencimento (${du.formatDate(todayStart)})';
+
+    try {
+      final capabilities = await FlutterEmailSender.getCapabilities();
+      final useHtml = capabilities.supportsHtmlBody;
+      final email = Email(
+        subject: subject,
+        body: useHtml ? body : plainTextBody,
+        isHTML: useHtml,
+        recipients: const [],
+      );
+
+      if (capabilities.canSend) {
+        await FlutterEmailSender.send(email);
+        return;
+      }
+
+      throw FlutterEmailSenderNotAvailableException(
+        'No email client available',
+      );
+    } on FlutterEmailSenderNotAvailableException catch (_) {
+      final fallbackBody = plainTextBody.trim();
+      final mailtoUri = Uri(
+        scheme: 'mailto',
+        queryParameters: {'subject': subject, 'body': fallbackBody},
+      );
+
+      try {
+        if (await canLaunchUrl(mailtoUri)) {
+          await launchUrl(mailtoUri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      } catch (_) {}
+
+      if (Platform.isAndroid) {
+        try {
+          final intent = AndroidIntent(
+            action: 'android.intent.action.SENDTO',
+            data: mailtoUri.toString(),
+          );
+          await intent.launch();
+          return;
+        } catch (_) {}
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nao foi possivel abrir o app de email.'),
+          ),
+        );
+      }
+    } catch (_) {
+      final fallbackBody = plainTextBody.trim();
+      final mailtoUri = Uri(
+        scheme: 'mailto',
+        queryParameters: {'subject': subject, 'body': fallbackBody},
+      );
+
+      try {
+        if (await canLaunchUrl(mailtoUri)) {
+          await launchUrl(mailtoUri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      } catch (_) {}
+
+      if (Platform.isAndroid) {
+        try {
+          final intent = AndroidIntent(
+            action: 'android.intent.action.SENDTO',
+            data: mailtoUri.toString(),
+          );
+          await intent.launch();
+          return;
+        } catch (_) {}
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nao foi possivel abrir o app de email.'),
+          ),
+        );
+      }
     }
   }
 
@@ -329,214 +732,395 @@ class _ProdutosScreenState extends State<ProdutosScreen>
     final localLabel = _filtrosLocal.isEmpty
         ? 'Todos'
         : _filtrosLocal.length <= 2
-            ? _filtrosLocal.join(', ')
-            : '${_filtrosLocal.length} selecionados';
+        ? _filtrosLocal.join(', ')
+        : '${_filtrosLocal.length} selecionados';
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Column(
-        children: [
-          // Filters
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Local:', style: TextStyle(fontSize: 12, color: Color(0xFF666666))),
-                          const SizedBox(height: 2),
-                          GestureDetector(
-                            onTap: () => _showLocalFilterSheet(),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFFCCCCCC)),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(localLabel, overflow: TextOverflow.ellipsis),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Dias:', style: TextStyle(fontSize: 12, color: Color(0xFF666666))),
-                          const SizedBox(height: 2),
-                          SizedBox(
-                            height: 34,
-                            child: TextField(
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                hintText: '4',
-                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              ),
-                              onChanged: (v) => setState(() => _diasFiltro = v),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Data Inicial:', style: TextStyle(fontSize: 12, color: Color(0xFF666666))),
-                          const SizedBox(height: 2),
-                          SizedBox(
-                            height: 34,
-                            child: TextField(
-                              controller: _dataInicialCtrl,
-                              keyboardType: TextInputType.number,
-                              maxLength: 10,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                hintText: 'DD/MM/AAAA',
-                                counterText: '',
-                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              ),
-                              onChanged: (v) {
-                                final masked = du.applyDateMask(v);
-                                if (masked != v) {
-                                  _dataInicialCtrl.text = masked;
-                                  _dataInicialCtrl.selection = TextSelection.fromPosition(TextPosition(offset: masked.length));
-                                }
-                                setState(() => _dataInicial = masked);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Data Final:', style: TextStyle(fontSize: 12, color: Color(0xFF666666))),
-                          const SizedBox(height: 2),
-                          SizedBox(
-                            height: 34,
-                            child: TextField(
-                              controller: _dataFinalCtrl,
-                              keyboardType: TextInputType.number,
-                              maxLength: 10,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                hintText: 'DD/MM/AAAA',
-                                counterText: '',
-                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              ),
-                              onChanged: (v) {
-                                final masked = du.applyDateMask(v);
-                                if (masked != v) {
-                                  _dataFinalCtrl.text = masked;
-                                  _dataFinalCtrl.selection = TextSelection.fromPosition(TextPosition(offset: masked.length));
-                                }
-                                setState(() => _dataFinal = masked);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Table
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: kPrimaryColor),
-                color: Colors.white,
-              ),
-              clipBehavior: Clip.antiAlias,
+    return SafeArea(
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Column(
+          children: [
+            // Filters
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(12),
               child: Column(
                 children: [
-                  Container(
-                    color: kPrimaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-                    child: Row(
-                      children: [
-                        _headerCell('Local${_sortArrow('local')}', 2, () => _toggleSort('local')),
-                        _headerCell('Qtd${_sortArrow('qtd')}', 1, () => _toggleSort('qtd')),
-                        _headerCell('Produto${_sortArrow('produto')}', 2, () => _toggleSort('produto')),
-                        _headerCell('Data${_sortArrow('validade')}', 2, () => _toggleSort('validade')),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: sorted.isEmpty
-                        ? const Center(child: Text('Nenhum produto encontrado', style: TextStyle(color: Color(0xFF999999))))
-                        : ListView.builder(
-                            itemCount: sorted.length,
-                            itemBuilder: (_, i) {
-                              final item = sorted[i];
-                              return InkWell(
-                                onTap: () => _openEditModal(item),
-                                child: Container(
-                                  decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE)))),
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                                  child: Row(
-                                    children: [
-                                      Expanded(flex: 2, child: Text(item.localNome, style: const TextStyle(fontSize: 13))),
-                                      Expanded(flex: 1, child: Text('${item.quantidade}', style: const TextStyle(fontSize: 13))),
-                                      Expanded(flex: 2, child: Text(item.nome, style: const TextStyle(fontSize: 13))),
-                                      Expanded(flex: 2, child: Text(item.validade, style: const TextStyle(fontSize: 13))),
-                                    ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Local:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            GestureDetector(
+                              onTap: () => _showLocalFilterSheet(),
+                              child: Container(
+                                width: double.infinity,
+                                height: 34,
+                                alignment: Alignment.centerLeft,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: const Color(0xFFCCCCCC),
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  localLabel,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Dias:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            SizedBox(
+                              height: 34,
+                              child: TextField(
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  hintText: '4',
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 6,
                                   ),
                                 ),
-                              );
-                            },
-                          ),
+                                onChanged: (v) =>
+                                    setState(() => _diasFiltro = v),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Data Inicial:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            SizedBox(
+                              height: 34,
+                              child: TextField(
+                                controller: _dataInicialCtrl,
+                                keyboardType: TextInputType.number,
+                                maxLength: 10,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  hintText: 'DD/MM/AAAA',
+                                  counterText: '',
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 6,
+                                  ),
+                                ),
+                                onChanged: (v) {
+                                  final masked = du.applyDateMask(v);
+                                  if (masked != v) {
+                                    _dataInicialCtrl.text = masked;
+                                    _dataInicialCtrl.selection =
+                                        TextSelection.fromPosition(
+                                          TextPosition(offset: masked.length),
+                                        );
+                                  }
+                                  setState(() => _dataInicial = masked);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Data Final:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            SizedBox(
+                              height: 34,
+                              child: TextField(
+                                controller: _dataFinalCtrl,
+                                keyboardType: TextInputType.number,
+                                maxLength: 10,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  hintText: 'DD/MM/AAAA',
+                                  counterText: '',
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 6,
+                                  ),
+                                ),
+                                onChanged: (v) {
+                                  final masked = du.applyDateMask(v);
+                                  if (masked != v) {
+                                    _dataFinalCtrl.text = masked;
+                                    _dataFinalCtrl.selection =
+                                        TextSelection.fromPosition(
+                                          TextPosition(offset: masked.length),
+                                        );
+                                  }
+                                  setState(() => _dataFinal = masked);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
-          // Email button
-          Padding(
-            padding: const EdgeInsets.only(right: 12, bottom: 5),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor, foregroundColor: Colors.white, minimumSize: const Size(170, 40)),
-                onPressed: _enviarEmail,
-                child: const Text('Enviar por Email', style: TextStyle(fontWeight: FontWeight.bold)),
+            // Table
+            Expanded(
+              child: RepaintBoundary(
+                key: _captureKey,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: kPrimaryColor),
+                    color: Colors.white,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      Container(
+                        color: kPrimaryColor,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 4,
+                        ),
+                        child: Row(
+                          children: [
+                            _headerCell(
+                              'Local${_sortArrow('local')}',
+                              3,
+                              () => _toggleSort('local'),
+                            ),
+                            _headerCell(
+                              'Qtd${_sortArrow('qtd')}',
+                              1,
+                              () => _toggleSort('qtd'),
+                              align: TextAlign.center,
+                            ),
+                            _headerCell(
+                              'Produto${_sortArrow('produto')}',
+                              4,
+                              () => _toggleSort('produto'),
+                            ),
+                            _headerCell(
+                              'Data${_sortArrow('validade')}',
+                              2,
+                              () => _toggleSort('validade'),
+                              align: TextAlign.right,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: _loading
+                            ? const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      color: kPrimaryColor,
+                                    ),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Carregando...',
+                                      style: TextStyle(
+                                        color: Color(0xFF999999),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : sorted.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'Nenhum produto encontrado',
+                                  style: TextStyle(color: Color(0xFF999999)),
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: sorted.length,
+                                itemBuilder: (_, i) {
+                                  final item = sorted[i];
+                                  return InkWell(
+                                    onTap: () => _openEditModal(item),
+                                    child: Container(
+                                      decoration: const BoxDecoration(
+                                        border: Border(
+                                          bottom: BorderSide(
+                                            color: Color(0xFFEEEEEE),
+                                          ),
+                                        ),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 8,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              item.localNome,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 1,
+                                            child: Text(
+                                              '${item.quantidade}',
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 4,
+                                            child: Text(
+                                              item.nome,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              du.formatShort(item.validade),
+                                              textAlign: TextAlign.right,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+            // Action buttons
+            Padding(
+              padding: const EdgeInsets.only(left: 12, right: 12, bottom: 5),
+              child: Row(
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimaryColor,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(140, 40),
+                    ),
+                    onPressed: _salvarPrintTela,
+                    child: const Text(
+                      'Print de tela',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const Spacer(),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimaryColor,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(170, 40),
+                    ),
+                    onPressed: _enviarEmail,
+                    child: const Text(
+                      'Enviar por Email',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _headerCell(String text, int flex, VoidCallback onTap) {
+  Widget _headerCell(
+    String text,
+    int flex,
+    VoidCallback onTap, {
+    TextAlign align = TextAlign.left,
+  }) {
     return Expanded(
       flex: flex,
       child: GestureDetector(
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+          child: Text(
+            text,
+            textAlign: align,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
         ),
       ),
     );
@@ -545,44 +1129,74 @@ class _ProdutosScreenState extends State<ProdutosScreen>
   void _showLocalFilterSheet() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Checkbox(
-                value: _filtrosLocal.isEmpty,
-                onChanged: (_) {
-                  setState(() => _filtrosLocal.clear());
-                  setSheetState(() {});
-                },
-              ),
-              title: const Text('Todos'),
-              onTap: () {
-                setState(() => _filtrosLocal.clear());
-                setSheetState(() {});
-              },
+        builder: (ctx, setSheetState) => SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
             ),
-            ..._locais.where((l) => l.ativo).map((l) {
-              final sel = _filtrosLocal.contains(l.nome);
-              return ListTile(
-                leading: Checkbox(
-                  value: sel,
-                  activeColor: kPrimaryColor,
-                  onChanged: (_) {
-                    _toggleLocalFilter(l.nome);
-                    setSheetState(() {});
-                  },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const ListTile(
+                  title: Text(
+                    'Filtrar por local',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
-                title: Text(l.nome, style: sel ? const TextStyle(color: Color(0xFF4A8A1A), fontWeight: FontWeight.bold) : null),
-                onTap: () {
-                  _toggleLocalFilter(l.nome);
-                  setSheetState(() {});
-                },
-              );
-            }),
-            const SizedBox(height: 16),
-          ],
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      ListTile(
+                        leading: Checkbox(
+                          value: _filtrosLocal.isEmpty,
+                          onChanged: (_) {
+                            setState(() => _filtrosLocal.clear());
+                            setSheetState(() {});
+                          },
+                        ),
+                        title: const Text('Todos'),
+                        onTap: () {
+                          setState(() => _filtrosLocal.clear());
+                          setSheetState(() {});
+                        },
+                      ),
+                      ..._locais.where((l) => l.ativo).map((l) {
+                        final sel = _filtrosLocal.contains(l.nome);
+                        return ListTile(
+                          leading: Checkbox(
+                            value: sel,
+                            activeColor: kPrimaryColor,
+                            onChanged: (_) {
+                              _toggleLocalFilter(l.nome);
+                              setSheetState(() {});
+                            },
+                          ),
+                          title: Text(
+                            l.nome,
+                            style: sel
+                                ? const TextStyle(
+                                    color: Color(0xFF4A8A1A),
+                                    fontWeight: FontWeight.bold,
+                                  )
+                                : null,
+                          ),
+                          onTap: () {
+                            _toggleLocalFilter(l.nome);
+                            setSheetState(() {});
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -590,6 +1204,7 @@ class _ProdutosScreenState extends State<ProdutosScreen>
 
   @override
   void dispose() {
+    dataChanged.removeListener(_handleDataChanged);
     _dataInicialCtrl.dispose();
     _dataFinalCtrl.dispose();
     super.dispose();

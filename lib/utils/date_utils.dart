@@ -14,6 +14,13 @@ String formatDate(DateTime date) {
   return '$d/$m/${date.year}';
 }
 
+/// Converte uma data DD/MM/AAAA para o formato curto DD/MM usado nas listas.
+String formatShort(String dateStr) {
+  final parts = dateStr.split('/');
+  if (parts.length >= 2) return '${parts[0]}/${parts[1]}';
+  return dateStr;
+}
+
 bool isWithinDays(String dateStr, int days) {
   final date = parseDate(dateStr);
   if (date == null) return false;

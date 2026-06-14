@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, ValueNotifier;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/local.dart';
@@ -14,6 +14,12 @@ const _storageKey = 'controle_validades_data';
 const _queueKey = 'controle_validades_queue';
 const _migratedKey = 'controle_validades_migrated';
 
+final ValueNotifier<int> dataChanged = ValueNotifier<int>(0);
+
+void _notifyDataChanged() {
+  dataChanged.value += 1;
+}
+
 // =================== Cache local (offline) ===================
 
 class _WorkbookData {
@@ -22,16 +28,18 @@ class _WorkbookData {
   _WorkbookData({required this.locais, required this.produtos});
 
   Map<String, dynamic> toJson() => {
-        'locais': locais.map((l) => l.toJson()).toList(),
-        'produtos': produtos.map((p) => p.toJson()).toList(),
-      };
+    'locais': locais.map((l) => l.toJson()).toList(),
+    'produtos': produtos.map((p) => p.toJson()).toList(),
+  };
 
   factory _WorkbookData.fromJson(Map<String, dynamic> json) {
-    final locaisList = (json['locais'] as List<dynamic>?)
+    final locaisList =
+        (json['locais'] as List<dynamic>?)
             ?.map((e) => Local.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [];
-    final produtosList = (json['produtos'] as List<dynamic>?)
+    final produtosList =
+        (json['produtos'] as List<dynamic>?)
             ?.map((e) => Produto.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [];
@@ -148,30 +156,32 @@ String _dbDateToApp(String? d) {
 }
 
 Map<String, dynamic> _toDbLocal(Local l) => {
-      'id': int.tryParse(l.id) ?? 0,
-      'name': l.nome,
-      'status': l.ativo,
-    };
+  'id': int.tryParse(l.id) ?? 0,
+  'name': l.nome,
+  'status': l.ativo,
+};
 
 Local _fromDbLocal(Map<String, dynamic> r) => Local(
-      id: r['id'].toString(),
-      nome: (r['name'] ?? '').toString(),
-      ativo: r['status'] == true,
-    );
+  id: r['id'].toString(),
+  nome: (r['name'] ?? '').toString(),
+  ativo: r['status'] == true,
+);
 
 Map<String, dynamic> _toDbProduto(Produto p) => {
-      'id': int.tryParse(p.id) ?? 0,
-      'name': p.nome,
-      'amount': p.quantidade,
-      'exp_date': _appDateToDb(p.validade),
-      'situation': p.situacao,
-      'status': p.status,
-      'id_location': int.tryParse(p.localId) ?? 0,
-    };
+  'id': int.tryParse(p.id) ?? 0,
+  'name': p.nome,
+  'amount': p.quantidade,
+  'exp_date': _appDateToDb(p.validade),
+  'situation': p.situacao,
+  'status': p.status,
+  'id_location': int.tryParse(p.localId) ?? 0,
+};
 
 Produto _fromDbProduto(Map<String, dynamic> r) {
   final loc = r['tb_location'];
-  final localNome = loc is Map<String, dynamic> ? (loc['name'] ?? '').toString() : '';
+  final localNome = loc is Map<String, dynamic>
+      ? (loc['name'] ?? '').toString()
+      : '';
   return Produto(
     id: r['id'].toString(),
     localId: (r['id_location'] ?? '').toString(),
@@ -220,15 +230,20 @@ Future<void> _applyOp(Map<String, dynamic> op) async {
     case 'upsertLocal':
       await supabase
           .from('tb_location')
-          .upsert(_toDbLocal(Local.fromJson(op['data'] as Map<String, dynamic>)));
+          .upsert(
+            _toDbLocal(Local.fromJson(op['data'] as Map<String, dynamic>)),
+          );
     case 'deleteLocal':
       await supabase
           .from('tb_location')
           .delete()
           .eq('id', int.tryParse(op['id'].toString()) ?? 0);
     case 'upsertProduto':
-      await supabase.from('tb_products').upsert(
-          _toDbProduto(Produto.fromJson(op['data'] as Map<String, dynamic>)));
+      await supabase
+          .from('tb_products')
+          .upsert(
+            _toDbProduto(Produto.fromJson(op['data'] as Map<String, dynamic>)),
+          );
     case 'deleteProduto':
       await supabase
           .from('tb_products')
@@ -260,18 +275,21 @@ Future<void> _ensureMigration() async {
     final produtosRekey = <Produto>[];
     for (final p in local.produtos) {
       final newId = _isNumericId(p.id) ? p.id : generateId();
-      final newLocalId = localIdRemap[p.localId] ??
+      final newLocalId =
+          localIdRemap[p.localId] ??
           (_isNumericId(p.localId) ? p.localId : '0');
-      produtosRekey.add(Produto(
-        id: newId,
-        localId: newLocalId,
-        localNome: p.localNome,
-        quantidade: p.quantidade,
-        nome: p.nome,
-        validade: p.validade,
-        situacao: p.situacao,
-        status: p.status,
-      ));
+      produtosRekey.add(
+        Produto(
+          id: newId,
+          localId: newLocalId,
+          localNome: p.localNome,
+          quantidade: p.quantidade,
+          nome: p.nome,
+          validade: p.validade,
+          situacao: p.situacao,
+          status: p.status,
+        ),
+      );
     }
     // Persiste os IDs re-chaveados no cache local para manter consistencia
     // entre o que o app mostra e o que sera enviado ao Supabase.
@@ -308,8 +326,9 @@ Future<void> _doSync() async {
   }
 
   final locaisRes = await supabase.from('tb_location').select('*');
-  final produtosRes =
-      await supabase.from('tb_products').select('*, tb_location(name)');
+  final produtosRes = await supabase
+      .from('tb_products')
+      .select('*, tb_location(name)');
 
   // Reverifica a fila antes de sobrescrever o cache: se novas ops foram
   // enfileiradas durante o fetch, pula a sobrescrita para não esconder
@@ -367,6 +386,7 @@ Future<void> saveLocais(List<Local> locais) async {
   }
   await _writeQueue(queue);
   unawaited(_ensureSynced(force: true));
+  _notifyDataChanged();
 }
 
 Future<void> addLocal(Local local) async {
@@ -374,6 +394,7 @@ Future<void> addLocal(Local local) async {
   data.locais.add(local);
   await _writeWorkbook(data);
   await _enqueue({'kind': 'upsertLocal', 'data': local.toJson()});
+  _notifyDataChanged();
 }
 
 Future<void> updateLocal(Local updated) async {
@@ -390,6 +411,7 @@ Future<void> updateLocal(Local updated) async {
   }
   await _writeWorkbook(data);
   await _enqueue({'kind': 'upsertLocal', 'data': updated.toJson()});
+  _notifyDataChanged();
 }
 
 Future<void> deleteLocal(String id) async {
@@ -397,6 +419,7 @@ Future<void> deleteLocal(String id) async {
   data.locais.removeWhere((l) => l.id == id);
   await _writeWorkbook(data);
   await _enqueue({'kind': 'deleteLocal', 'id': id});
+  _notifyDataChanged();
 }
 
 Future<List<Local>> getLocaisAtivos() async {
@@ -423,6 +446,7 @@ Future<void> saveProdutos(List<Produto> produtos) async {
   }
   await _writeQueue(queue);
   unawaited(_ensureSynced(force: true));
+  _notifyDataChanged();
 }
 
 Future<void> addProduto(Produto produto) async {
@@ -430,6 +454,7 @@ Future<void> addProduto(Produto produto) async {
   data.produtos.add(produto);
   await _writeWorkbook(data);
   await _enqueue({'kind': 'upsertProduto', 'data': produto.toJson()});
+  _notifyDataChanged();
 }
 
 Future<void> addProdutos(List<Produto> newProdutos) async {
@@ -442,6 +467,7 @@ Future<void> addProdutos(List<Produto> newProdutos) async {
   }
   await _writeQueue(queue);
   unawaited(_ensureSynced(force: true));
+  _notifyDataChanged();
 }
 
 /// Grava todos os locais + produtos de uma vez (uma única escrita no cache e
@@ -462,6 +488,7 @@ Future<void> importBatch(List<Local> locais, List<Produto> produtos) async {
   }
   await _writeQueue(queue);
   unawaited(_ensureSynced(force: true));
+  _notifyDataChanged();
 }
 
 Future<void> updateProduto(Produto updated) async {
@@ -471,6 +498,7 @@ Future<void> updateProduto(Produto updated) async {
   data.produtos[index] = updated;
   await _writeWorkbook(data);
   await _enqueue({'kind': 'upsertProduto', 'data': updated.toJson()});
+  _notifyDataChanged();
 }
 
 Future<void> deleteProduto(String id) async {
@@ -478,12 +506,14 @@ Future<void> deleteProduto(String id) async {
   data.produtos.removeWhere((p) => p.id == id);
   await _writeWorkbook(data);
   await _enqueue({'kind': 'deleteProduto', 'id': id});
+  _notifyDataChanged();
 }
 
 Future<void> clearAllData() async {
   await _writeWorkbook(_WorkbookData(locais: [], produtos: []));
   await _writeQueue([
-    {'kind': 'clearAll'}
+    {'kind': 'clearAll'},
   ]);
   unawaited(_ensureSynced(force: true));
+  _notifyDataChanged();
 }
