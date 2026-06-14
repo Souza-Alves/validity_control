@@ -1,13 +1,64 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/services.dart';
 import 'package:excel/excel.dart' as xl;
-import 'package:uuid/uuid.dart';
 import '../models/local.dart';
 import '../models/produto.dart';
 import '../storage/storage.dart';
+import '../utils/id.dart';
 import '../main.dart' show kPrimaryColor;
+
+String _normalizeYear(String yearStr) {
+  if (yearStr.length <= 2) {
+    final y = int.tryParse(yearStr) ?? 0;
+    return (y <= 30 ? 2000 + y : 1900 + y).toString();
+  }
+  return yearStr;
+}
+
+String _pad2(int v) => v.toString().padLeft(2, '0');
+
+/// Converte o valor da celula de vencimento para DD/MM/AAAA, aceitando data
+/// nativa do Excel, numero serial (dias desde 1899-12-30) ou string.
+String parseExcelDate(Object? cell) {
+  if (cell == null) return '';
+  if (cell is xl.DateCellValue) {
+    return '${_pad2(cell.day)}/${_pad2(cell.month)}/${cell.year}';
+  }
+  if (cell is xl.DateTimeCellValue) {
+    return '${_pad2(cell.day)}/${_pad2(cell.month)}/${cell.year}';
+  }
+  if (cell is xl.IntCellValue) {
+    final d = DateTime(1899, 12, 30).add(Duration(days: cell.value));
+    return '${_pad2(d.day)}/${_pad2(d.month)}/${d.year}';
+  }
+  if (cell is xl.DoubleCellValue) {
+    final d = DateTime(1899, 12, 30).add(Duration(days: cell.value.round()));
+    return '${_pad2(d.day)}/${_pad2(d.month)}/${d.year}';
+  }
+  final raw = cell is xl.TextCellValue ? cell.value.toString() : cell.toString();
+  final s = raw.trim();
+  if (s.isEmpty) return '';
+  final serial = num.tryParse(s);
+  if (serial != null) {
+    final d = DateTime(1899, 12, 30).add(Duration(days: serial.round()));
+    return '${_pad2(d.day)}/${_pad2(d.month)}/${d.year}';
+  }
+  if (s.contains('/')) {
+    final parts = s.split('/');
+    if (parts.length == 3) {
+      return '${parts[0].padLeft(2, '0')}/${parts[1].padLeft(2, '0')}/${_normalizeYear(parts[2])}';
+    }
+  }
+  if (s.contains('-')) {
+    final parts = s.split('-');
+    if (parts.length == 3) {
+      // ISO YYYY-MM-DD
+      return '${parts[2].padLeft(2, '0')}/${parts[1].padLeft(2, '0')}/${_normalizeYear(parts[0])}';
+    }
+  }
+  return s;
+}
 
 class _ImportRow {
   final String predio;
@@ -89,7 +140,7 @@ class _ImportarScreenState extends State<ImportarScreen>
       final predio = row.length > predioIdx ? (row[predioIdx]?.value?.toString() ?? '') : '';
       final qtd = row.length > qtdIdx ? (int.tryParse(row[qtdIdx]?.value?.toString() ?? '') ?? 0) : 0;
       final prod = row.length > prodIdx ? (row[prodIdx]?.value?.toString() ?? '') : '';
-      final venc = row.length > vencIdx ? (row[vencIdx]?.value?.toString() ?? '') : '';
+      final venc = row.length > vencIdx ? parseExcelDate(row[vencIdx]?.value) : '';
       if (predio.isNotEmpty && prod.isNotEmpty) {
         rows.add(_ImportRow(predio: predio, quantidade: qtd, produto: prod, vencimento: venc));
       }
@@ -108,17 +159,18 @@ class _ImportarScreenState extends State<ImportarScreen>
 
     final existingLocais = await getLocais();
     final localMap = <String, Local>{for (final l in existingLocais) l.nome.toLowerCase(): l};
+    final newLocais = <Local>[];
     final newProdutos = <Produto>[];
 
     for (final row in _importedRows) {
       var local = localMap[row.predio.toLowerCase()];
       if (local == null) {
-        local = Local(id: const Uuid().v4(), nome: row.predio, ativo: true);
-        await addLocal(local);
+        local = Local(id: generateId(), nome: row.predio, ativo: true);
+        newLocais.add(local);
         localMap[row.predio.toLowerCase()] = local;
       }
       newProdutos.add(Produto(
-        id: const Uuid().v4(),
+        id: generateId(),
         localId: local.id,
         localNome: local.nome,
         quantidade: row.quantidade,
@@ -127,7 +179,7 @@ class _ImportarScreenState extends State<ImportarScreen>
       ));
     }
 
-    await addProdutos(newProdutos);
+    await importBatch(newLocais, newProdutos);
     setState(() { _imported = true; _loading = false; });
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${newProdutos.length} produto(s) importado(s) com sucesso!')));
   }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import '../models/local.dart';
 import '../models/produto.dart';
 import '../storage/storage.dart';
 import '../utils/date_utils.dart' as du;
+import '../utils/id.dart';
 import '../main.dart' show kPrimaryColor;
 
 class CadastroScreen extends StatefulWidget {
@@ -59,7 +59,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
     }
 
     await addProduto(Produto(
-      id: const Uuid().v4(),
+      id: generateId(),
       localId: _localId,
       localNome: _localNome,
       quantidade: int.parse(_quantidadeCtrl.text),

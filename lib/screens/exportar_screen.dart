@@ -51,8 +51,19 @@ class _ExportarScreenState extends State<ExportarScreen> {
     if (mounted) setState(() { _produtos = prods; _locais = locs; });
   }
 
+  bool _isLocalAtivo(Produto p) {
+    for (final l in _locais) {
+      if (l.id == p.localId) return l.ativo;
+    }
+    for (final l in _locais) {
+      if (l.nome.toLowerCase() == p.localNome.toLowerCase()) return l.ativo;
+    }
+    return false;
+  }
+
   List<Produto> get _filtered {
     return _produtos.where((p) {
+      if (!_isLocalAtivo(p)) return false;
       if (_filtrosLocal.isNotEmpty) {
         if (!_filtrosLocal.any((f) => p.localNome.toLowerCase() == f.toLowerCase())) return false;
       }
@@ -404,7 +415,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
               title: const Text('Todos'),
               onTap: () { setState(() => _filtrosLocal.clear()); setSheetState(() {}); },
             ),
-            ..._locais.map((l) {
+            ..._locais.where((l) => l.ativo).map((l) {
               final sel = _filtrosLocal.contains(l.nome);
               return ListTile(
                 leading: Checkbox(value: sel, activeColor: kPrimaryColor, onChanged: (_) { _toggleLocalFilter(l.nome); setSheetState(() {}); }),

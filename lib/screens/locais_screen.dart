@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import '../models/local.dart';
 import '../storage/storage.dart';
+import '../utils/id.dart';
 import '../main.dart' show kPrimaryColor;
 
 class LocaisScreen extends StatefulWidget {
@@ -40,7 +40,7 @@ class _LocaisScreenState extends State<LocaisScreen>
     if (_editingId != null) {
       await updateLocal(Local(id: _editingId!, nome: _nomeController.text.trim(), ativo: _ativo));
     } else {
-      await addLocal(Local(id: const Uuid().v4(), nome: _nomeController.text.trim(), ativo: _ativo));
+      await addLocal(Local(id: generateId(), nome: _nomeController.text.trim(), ativo: _ativo));
     }
     _nomeController.clear();
     setState(() { _ativo = true; _editingId = null; });

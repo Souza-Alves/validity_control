@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'supabase/supabase_client.dart';
 import 'screens/produtos_screen.dart';
 import 'screens/locais_screen.dart';
 import 'screens/cadastro_screen.dart';
@@ -8,7 +11,13 @@ import 'screens/configuracao_screen.dart';
 
 const kPrimaryColor = Color(0xFF7CB24B);
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await initSupabase();
+  } catch (_) {
+    // Sem rede no boot: o app abre em modo offline e sincroniza depois.
+  }
   runApp(const MyApp());
 }
 
@@ -88,6 +97,29 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  bool _offline = false;
+  StreamSubscription<List<ConnectivityResult>>? _connSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _connSub = Connectivity().onConnectivityChanged.listen((results) {
+      if (mounted) {
+        setState(() => _offline = results.contains(ConnectivityResult.none));
+      }
+    });
+    Connectivity().checkConnectivity().then((results) {
+      if (mounted) {
+        setState(() => _offline = results.contains(ConnectivityResult.none));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connSub?.cancel();
+    super.dispose();
+  }
 
   static const _titles = [
     'Produtos',
@@ -127,7 +159,28 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
       ),
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: Column(
+        children: [
+          if (_offline)
+            Container(
+              width: double.infinity,
+              color: const Color(0xFFFF9800),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child: const Text(
+                'Problemas na conexao. As alteracoes serao realizadas offline e '
+                'adicionadas posteriormente quando houver conexao na base.',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+          Expanded(
+            child: IndexedStack(index: _currentIndex, children: _screens),
+          ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
