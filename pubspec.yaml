@@ -24,6 +24,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
@@ -31,4 +32,14 @@ flutter:
     - assets/
   config:
     enable-swift-package-manager: false   
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon.png"
+  adaptive_icon_background: "#67D397"
+  adaptive_icon_foreground: "assets/icon_foreground.png"
+  web:
+    generate: true
+    image_path: "assets/icon.png"
   

@@ -182,7 +182,10 @@ class _ExportarScreenState extends State<ExportarScreen> {
                           GestureDetector(
                             onTap: () => _showLocalFilterSheet(),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              width: double.infinity,
+                              height: 34,
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
                               decoration: BoxDecoration(border: Border.all(color: const Color(0xFFCCCCCC)), borderRadius: BorderRadius.circular(6)),
                               child: Text(localLabel, overflow: TextOverflow.ellipsis),
                             ),
@@ -357,7 +360,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                     Expanded(flex: 2, child: Text(item.localNome, style: const TextStyle(fontSize: 13))),
                                     Expanded(flex: 1, child: Text('${item.quantidade}', style: const TextStyle(fontSize: 13))),
                                     Expanded(flex: 3, child: Text(item.nome, style: const TextStyle(fontSize: 13))),
-                                    Expanded(flex: 1, child: Text(item.validade, style: const TextStyle(fontSize: 13))),
+                                    Expanded(flex: 1, child: Text(du.formatShort(item.validade), style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
                                     Expanded(flex: 2, child: Text(item.situacao.isEmpty ? '-' : item.situacao, style: const TextStyle(fontSize: 13))),
                                     Expanded(flex: 2, child: Text(item.status.isEmpty ? '-' : item.status, style: const TextStyle(fontSize: 13))),
                                   ],
