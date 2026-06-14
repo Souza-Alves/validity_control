@@ -67,16 +67,25 @@ class _SplashWrapperState extends State<SplashWrapper> {
             children: [
               Image.asset('assets/market4u.png', width: 200, height: 200),
               const SizedBox(height: 24),
-              const Text(
-                'Controle de Validades',
-                style: TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Controle de Validades',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               const Text(
                 'Gerenciamento de Vencimentos',
+                textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 24, color: Color(0xFFE8F5E9)),
               ),
             ],
