@@ -339,7 +339,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                     child: Row(
                       children: [
                         _headerCell('Local${_sortArrow('local')}', 2, () => _toggleSort('local')),
-                        _headerCell('Qtd${_sortArrow('qtd')}', 1, () => _toggleSort('qtd')),
+                        _headerCell('Qtd${_sortArrow('qtd')}', 1, () => _toggleSort('qtd'), align: TextAlign.center),
                         _headerCell('Produto${_sortArrow('produto')}', 3, () => _toggleSort('produto')),
                         _headerCell('Data${_sortArrow('validade')}', 2, () => _toggleSort('validade')),
                         _headerCell('Situação${_sortArrow('situacao')}', 2, () => _toggleSort('situacao')),
@@ -371,7 +371,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                 child: Row(
                                   children: [
                                     Expanded(flex: 2, child: Text(item.localNome, style: const TextStyle(fontSize: 11))),
-                                    Expanded(flex: 1, child: Text('${item.quantidade}', style: const TextStyle(fontSize: 11))),
+                                    Expanded(flex: 1, child: Text('${item.quantidade}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11))),
                                     Expanded(flex: 3, child: Text(item.nome, style: const TextStyle(fontSize: 11))),
                                     Expanded(flex: 2, child: Text(du.formatShort(item.validade), style: const TextStyle(fontSize: 11), maxLines: 1, softWrap: false, overflow: TextOverflow.visible)),
                                     Expanded(flex: 2, child: Text(item.situacao.isEmpty ? '-' : item.situacao, style: const TextStyle(fontSize: 11))),
@@ -403,14 +403,14 @@ class _ExportarScreenState extends State<ExportarScreen> {
     );
   }
 
-  Widget _headerCell(String text, int flex, VoidCallback onTap) {
+  Widget _headerCell(String text, int flex, VoidCallback onTap, {TextAlign align = TextAlign.left}) {
     return Expanded(
       flex: flex,
       child: GestureDetector(
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+          child: Text(text, textAlign: align, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
         ),
       ),
     );

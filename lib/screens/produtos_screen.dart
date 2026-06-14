@@ -482,7 +482,7 @@ class _ProdutosScreenState extends State<ProdutosScreen>
                     child: Row(
                       children: [
                         _headerCell('Local${_sortArrow('local')}', 3, () => _toggleSort('local')),
-                        _headerCell('Qtd${_sortArrow('qtd')}', 1, () => _toggleSort('qtd')),
+                        _headerCell('Qtd${_sortArrow('qtd')}', 1, () => _toggleSort('qtd'), align: TextAlign.center),
                         _headerCell('Produto${_sortArrow('produto')}', 4, () => _toggleSort('produto')),
                         _headerCell('Data${_sortArrow('validade')}', 2, () => _toggleSort('validade'), align: TextAlign.right),
                       ],
@@ -514,7 +514,7 @@ class _ProdutosScreenState extends State<ProdutosScreen>
                                   child: Row(
                                     children: [
                                       Expanded(flex: 3, child: Text(item.localNome, style: const TextStyle(fontSize: 11))),
-                                      Expanded(flex: 1, child: Text('${item.quantidade}', style: const TextStyle(fontSize: 11))),
+                                      Expanded(flex: 1, child: Text('${item.quantidade}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11))),
                                       Expanded(flex: 4, child: Text(item.nome, style: const TextStyle(fontSize: 11))),
                                       Expanded(flex: 2, child: Text(du.formatShort(item.validade), textAlign: TextAlign.right, style: const TextStyle(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis)),
                                     ],
