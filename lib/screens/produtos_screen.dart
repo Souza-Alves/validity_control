@@ -481,8 +481,8 @@ class _ProdutosScreenState extends State<ProdutosScreen>
                       children: [
                         _headerCell('Local${_sortArrow('local')}', 2, () => _toggleSort('local')),
                         _headerCell('Qtd${_sortArrow('qtd')}', 1, () => _toggleSort('qtd')),
-                        _headerCell('Produto${_sortArrow('produto')}', 2, () => _toggleSort('produto')),
-                        _headerCell('Data${_sortArrow('validade')}', 2, () => _toggleSort('validade')),
+                        _headerCell('Produto${_sortArrow('produto')}', 4, () => _toggleSort('produto')),
+                        _headerCell('Data${_sortArrow('validade')}', 2, () => _toggleSort('validade'), align: TextAlign.right),
                       ],
                     ),
                   ),
@@ -502,8 +502,8 @@ class _ProdutosScreenState extends State<ProdutosScreen>
                                     children: [
                                       Expanded(flex: 2, child: Text(item.localNome, style: const TextStyle(fontSize: 13))),
                                       Expanded(flex: 1, child: Text('${item.quantidade}', style: const TextStyle(fontSize: 13))),
-                                      Expanded(flex: 2, child: Text(item.nome, style: const TextStyle(fontSize: 13))),
-                                      Expanded(flex: 2, child: Text(du.formatShort(item.validade), style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                      Expanded(flex: 4, child: Text(item.nome, style: const TextStyle(fontSize: 13))),
+                                      Expanded(flex: 2, child: Text(du.formatShort(item.validade), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
                                     ],
                                   ),
                                 ),
@@ -532,14 +532,14 @@ class _ProdutosScreenState extends State<ProdutosScreen>
     );
   }
 
-  Widget _headerCell(String text, int flex, VoidCallback onTap) {
+  Widget _headerCell(String text, int flex, VoidCallback onTap, {TextAlign align = TextAlign.left}) {
     return Expanded(
       flex: flex,
       child: GestureDetector(
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+          child: Text(text, textAlign: align, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
         ),
       ),
     );
