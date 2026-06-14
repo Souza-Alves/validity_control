@@ -339,8 +339,8 @@ class _ExportarScreenState extends State<ExportarScreen> {
                         _headerCell('Local${_sortArrow('local')}', 2, () => _toggleSort('local')),
                         _headerCell('Qtd${_sortArrow('qtd')}', 1, () => _toggleSort('qtd')),
                         _headerCell('Produto${_sortArrow('produto')}', 3, () => _toggleSort('produto')),
-                        _headerCell('Data${_sortArrow('validade')}', 1, () => _toggleSort('validade')),
-                        _headerCell('Sit.${_sortArrow('situacao')}', 2, () => _toggleSort('situacao')),
+                        _headerCell('Data${_sortArrow('validade')}', 2, () => _toggleSort('validade')),
+                        _headerCell('Situação${_sortArrow('situacao')}', 2, () => _toggleSort('situacao')),
                         _headerCell('Status${_sortArrow('status')}', 2, () => _toggleSort('status')),
                       ],
                     ),
@@ -357,12 +357,12 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                                 child: Row(
                                   children: [
-                                    Expanded(flex: 2, child: Text(item.localNome, style: const TextStyle(fontSize: 13))),
-                                    Expanded(flex: 1, child: Text('${item.quantidade}', style: const TextStyle(fontSize: 13))),
-                                    Expanded(flex: 3, child: Text(item.nome, style: const TextStyle(fontSize: 13))),
-                                    Expanded(flex: 1, child: Text(du.formatShort(item.validade), style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                    Expanded(flex: 2, child: Text(item.situacao.isEmpty ? '-' : item.situacao, style: const TextStyle(fontSize: 13))),
-                                    Expanded(flex: 2, child: Text(item.status.isEmpty ? '-' : item.status, style: const TextStyle(fontSize: 13))),
+                                    Expanded(flex: 2, child: Text(item.localNome, style: const TextStyle(fontSize: 11))),
+                                    Expanded(flex: 1, child: Text('${item.quantidade}', style: const TextStyle(fontSize: 11))),
+                                    Expanded(flex: 3, child: Text(item.nome, style: const TextStyle(fontSize: 11))),
+                                    Expanded(flex: 2, child: Text(du.formatShort(item.validade), style: const TextStyle(fontSize: 11), maxLines: 1, softWrap: false, overflow: TextOverflow.visible)),
+                                    Expanded(flex: 2, child: Text(item.situacao.isEmpty ? '-' : item.situacao, style: const TextStyle(fontSize: 11))),
+                                    Expanded(flex: 2, child: Text(item.status.isEmpty ? '-' : item.status, style: const TextStyle(fontSize: 11))),
                                   ],
                                 ),
                               );
@@ -397,7 +397,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+          child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
         ),
       ),
     );
