@@ -76,9 +76,10 @@ class _SplashWrapperState extends State<SplashWrapper> {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -108,6 +109,8 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   bool _offline = false;
   StreamSubscription<List<ConnectivityResult>>? _connSub;
+  final _produtosScreenKey = GlobalKey<ProdutosScreenState>();
+  final _cadastroScreenKey = GlobalKey<CadastroScreenState>();
 
   @override
   void initState() {
@@ -139,10 +142,10 @@ class _MainScreenState extends State<MainScreen> {
     'Configuracao',
   ];
 
-  final _screens = <Widget>[
-    const ProdutosScreen(),
+  late final List<Widget> _screens = <Widget>[
+    ProdutosScreen(key: _produtosScreenKey),
     const LocaisScreen(),
-    const CadastroScreen(),
+    CadastroScreen(key: _cadastroScreenKey),
     const ImportarScreen(),
     const ExportarScreen(),
     const ConfiguracaoScreen(),
@@ -155,15 +158,20 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: kPrimaryColor,
         title: Row(
           children: [
-            Image.asset('assets/market4u.png',
-                width: 140, height: 50, fit: BoxFit.contain),
+            Image.asset(
+              'assets/market4u.png',
+              width: 140,
+              height: 50,
+              fit: BoxFit.contain,
+            ),
             const Spacer(),
             Text(
               _titles[_currentIndex],
               style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -174,15 +182,15 @@ class _MainScreenState extends State<MainScreen> {
             Container(
               width: double.infinity,
               color: const Color(0xFFFF9800),
-              padding:
-                  const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: const Text(
                 'Problemas na conexao. As alteracoes serao realizadas offline e '
                 'adicionadas posteriormente quando houver conexao na base.',
                 style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600),
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           Expanded(
@@ -192,7 +200,17 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
+        onTap: (i) {
+          setState(() => _currentIndex = i);
+          switch (i) {
+            case 0:
+              _produtosScreenKey.currentState?.refresh();
+              break;
+            case 2:
+              _cadastroScreenKey.currentState?.refresh();
+              break;
+          }
+        },
         type: BottomNavigationBarType.fixed,
         backgroundColor: kPrimaryColor,
         selectedItemColor: Colors.white,
@@ -200,18 +218,12 @@ class _MainScreenState extends State<MainScreen> {
         selectedFontSize: 11,
         unselectedFontSize: 11,
         items: const [
-          BottomNavigationBarItem(
-              icon: SizedBox.shrink(), label: 'Produtos'),
-          BottomNavigationBarItem(
-              icon: SizedBox.shrink(), label: 'Locais'),
-          BottomNavigationBarItem(
-              icon: SizedBox.shrink(), label: 'Cadastrar'),
-          BottomNavigationBarItem(
-              icon: SizedBox.shrink(), label: 'Importar'),
-          BottomNavigationBarItem(
-              icon: SizedBox.shrink(), label: 'Exportar'),
-          BottomNavigationBarItem(
-              icon: SizedBox.shrink(), label: 'Config'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Produtos'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Locais'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Cadastrar'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Importar'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Exportar'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Config'),
         ],
       ),
     );

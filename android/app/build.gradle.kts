@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.controlevalidades.controle_validades"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
