@@ -1,6 +1,6 @@
 {
-    "name": "controle_validades",
-    "short_name": "controle_validades",
+    "name": "Controle de Validades",
+    "short_name": "Controle de Validades",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
