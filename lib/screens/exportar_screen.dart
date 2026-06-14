@@ -23,6 +23,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
   String _periodoFim = '';
   String _sortField = 'validade';
   bool _sortAsc = true;
+  bool _loading = true;
   final _periodoInicioCtrl = TextEditingController();
   final _periodoFimCtrl = TextEditingController();
 
@@ -46,9 +47,10 @@ class _ExportarScreenState extends State<ExportarScreen> {
   }
 
   Future<void> _loadData() async {
+    if (mounted && _produtos.isEmpty) setState(() => _loading = true);
     final prods = await getProdutos();
     final locs = await getLocais();
-    if (mounted) setState(() { _produtos = prods; _locais = locs; });
+    if (mounted) setState(() { _produtos = prods; _locais = locs; _loading = false; });
   }
 
   bool _isLocalAtivo(Produto p) {
@@ -346,7 +348,18 @@ class _ExportarScreenState extends State<ExportarScreen> {
                     ),
                   ),
                   Expanded(
-                    child: sorted.isEmpty
+                    child: _loading
+                        ? const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(color: kPrimaryColor),
+                                SizedBox(height: 12),
+                                Text('Carregando...', style: TextStyle(color: Color(0xFF999999))),
+                              ],
+                            ),
+                          )
+                        : sorted.isEmpty
                         ? const Center(child: Text('Nenhum produto encontrado', style: TextStyle(color: Color(0xFF999999))))
                         : ListView.builder(
                             itemCount: sorted.length,
