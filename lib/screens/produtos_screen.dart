@@ -8,10 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:open_filex_plus/open_filex_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/produto.dart';
-import '../models/local.dart';
-import '../storage/storage.dart';
 import '../utils/date_utils.dart' as du;
 import '../theme/app_colors.dart';
+import '../controllers/produtos_controller.dart';
 import '../widgets/loading_indicator.dart';
 import '../widgets/table_header_cell.dart';
 
@@ -24,15 +23,7 @@ class ProdutosScreen extends StatefulWidget {
 
 class ProdutosScreenState extends State<ProdutosScreen>
     with AutomaticKeepAliveClientMixin {
-  List<Produto> _produtos = [];
-  List<Local> _locais = [];
-  final List<String> _filtrosLocal = [];
-  String _dataInicial = '';
-  String _dataFinal = '';
-  String _diasFiltro = '';
-  String _sortField = 'validade';
-  bool _sortAsc = true;
-  bool _loading = true;
+  late final ProdutosController _c;
   final _dataInicialCtrl = TextEditingController();
   final _dataFinalCtrl = TextEditingController();
   final GlobalKey _captureKey = GlobalKey();
@@ -44,114 +35,26 @@ class ProdutosScreenState extends State<ProdutosScreen>
   @override
   void initState() {
     super.initState();
-    dataChanged.addListener(_handleDataChanged);
-    _loadData();
+    _c = ProdutosController()..addListener(_onControllerChanged);
+    _c.load();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadData();
+    _c.load();
   }
 
-  void _handleDataChanged() {
-    if (mounted) refresh();
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> refresh() async {
-    await _loadData();
-  }
-
-  Future<void> _loadData() async {
-    if (mounted && _produtos.isEmpty) setState(() => _loading = true);
-    final prods = await getProdutos();
-    final locs = await getLocais();
-    if (mounted) {
-      setState(() {
-        _produtos = prods;
-        _locais = locs;
-        _loading = false;
-      });
-    }
-  }
-
-  bool _isLocalAtivo(Produto p) {
-    for (final l in _locais) {
-      if (l.id == p.localId) return l.ativo;
-    }
-    for (final l in _locais) {
-      if (l.nome.toLowerCase() == p.localNome.toLowerCase()) return l.ativo;
-    }
-    return false;
-  }
-
-  List<Produto> get _filtered {
-    return _produtos.where((p) {
-      if (!_isLocalAtivo(p)) return false;
-      if (p.situacao == 'Vendido' || p.situacao == 'Vencido') return false;
-      if (_filtrosLocal.isNotEmpty) {
-        if (!_filtrosLocal.any(
-          (f) => p.localNome.toLowerCase() == f.toLowerCase(),
-        )) {
-          return false;
-        }
-      }
-      if (_dataInicial.isNotEmpty && _dataFinal.isNotEmpty) {
-        return du.isInRange(p.validade, _dataInicial, _dataFinal);
-      }
-      final days = int.tryParse(_diasFiltro);
-      if (days != null && days >= 0) {
-        return du.isWithinDays(p.validade, days);
-      }
-      return true;
-    }).toList();
-  }
-
-  List<Produto> get _sorted {
-    final list = List<Produto>.from(_filtered);
-    list.sort((a, b) {
-      int cmp;
-      switch (_sortField) {
-        case 'local':
-          cmp = a.localNome.compareTo(b.localNome);
-        case 'qtd':
-          cmp = a.quantidade.compareTo(b.quantidade);
-        case 'produto':
-          cmp = a.nome.compareTo(b.nome);
-        default:
-          cmp = du.compareDates(a.validade, b.validade);
-      }
-      return _sortAsc ? cmp : -cmp;
-    });
-    return list;
-  }
-
-  void _toggleSort(String field) {
-    setState(() {
-      if (_sortField == field) {
-        _sortAsc = !_sortAsc;
-      } else {
-        _sortField = field;
-        _sortAsc = true;
-      }
-    });
-  }
-
-  String _sortArrow(String field) =>
-      _sortField == field ? (_sortAsc ? ' ▲' : ' ▼') : '';
-
-  void _toggleLocalFilter(String nome) {
-    setState(() {
-      if (_filtrosLocal.contains(nome)) {
-        _filtrosLocal.remove(nome);
-      } else {
-        _filtrosLocal.add(nome);
-      }
-    });
+    await _c.load();
   }
 
   Future<void> _openEditModal(Produto produto) async {
-    final locaisAtivos = _locais.where((l) => l.ativo).toList();
+    final locaisAtivos = _c.locais.where((l) => l.ativo).toList();
     String editLocalId = produto.localId;
     String editLocalNome = produto.localNome;
     String editNome = produto.nome;
@@ -387,7 +290,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                           );
                           return;
                         }
-                        await updateProduto(
+                        await _c.updateProduto(
                           produto.copyWith(
                             localId: editLocalId,
                             localNome: editLocalNome,
@@ -399,7 +302,6 @@ class ProdutosScreenState extends State<ProdutosScreen>
                           ),
                         );
                         if (ctx.mounted) Navigator.pop(ctx);
-                        _loadData();
                       },
                       child: const FittedBox(child: Text('Salvar')),
                     ),
@@ -427,10 +329,9 @@ class ProdutosScreenState extends State<ProdutosScreen>
                                   foregroundColor: Colors.red,
                                 ),
                                 onPressed: () async {
-                                  await deleteProduto(produto.id);
+                                  await _c.deleteProduto(produto.id);
                                   if (c.mounted) Navigator.pop(c);
                                   if (ctx.mounted) Navigator.pop(ctx);
-                                  _loadData();
                                 },
                                 child: const FittedBox(child: Text('Remover')),
                               ),
@@ -581,14 +482,9 @@ class ProdutosScreenState extends State<ProdutosScreen>
   }
 
   Future<void> _enviarEmail() async {
-    final today = DateTime.now();
-    final todayStart = DateTime(today.year, today.month, today.day);
-    final futureDate = todayStart.add(const Duration(days: 4));
-
-    final itens = _produtos.where((p) {
-      final d = du.parseDate(p.validade);
-      return d != null && !d.isBefore(todayStart) && !d.isAfter(futureDate);
-    }).toList()..sort((a, b) => a.localNome.compareTo(b.localNome));
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final itens = _c.proximosVencimentos(4);
 
     if (itens.isEmpty) {
       if (mounted) {
@@ -767,12 +663,12 @@ class ProdutosScreenState extends State<ProdutosScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final sorted = _sorted;
-    final localLabel = _filtrosLocal.isEmpty
+    final sorted = _c.sorted;
+    final localLabel = _c.filtrosLocal.isEmpty
         ? 'Todos'
-        : _filtrosLocal.length <= 2
-        ? _filtrosLocal.join(', ')
-        : '${_filtrosLocal.length} selecionados';
+        : _c.filtrosLocal.length <= 2
+        ? _c.filtrosLocal.join(', ')
+        : '${_c.filtrosLocal.length} selecionados';
 
     return SafeArea(
       child: GestureDetector(
@@ -846,8 +742,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                                     vertical: 6,
                                   ),
                                 ),
-                                onChanged: (v) =>
-                                    setState(() => _diasFiltro = v),
+                                onChanged: (v) => _c.setDias(v),
                               ),
                             ),
                           ],
@@ -894,7 +789,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                                           TextPosition(offset: masked.length),
                                         );
                                   }
-                                  setState(() => _dataInicial = masked);
+                                  _c.setDataInicial(masked);
                                 },
                               ),
                             ),
@@ -938,7 +833,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                                           TextPosition(offset: masked.length),
                                         );
                                   }
-                                  setState(() => _dataFinal = masked);
+                                  _c.setDataFinal(masked);
                                 },
                               ),
                             ),
@@ -976,32 +871,32 @@ class ProdutosScreenState extends State<ProdutosScreen>
                         child: Row(
                           children: [
                             _headerCell(
-                              'Local${_sortArrow('local')}',
+                              'Local${_c.sortArrow('local')}',
                               3,
-                              () => _toggleSort('local'),
+                              () => _c.toggleSort('local'),
                             ),
                             _headerCell(
-                              'Qtd${_sortArrow('qtd')}',
+                              'Qtd${_c.sortArrow('qtd')}',
                               1,
-                              () => _toggleSort('qtd'),
+                              () => _c.toggleSort('qtd'),
                               align: TextAlign.center,
                             ),
                             _headerCell(
-                              'Produto${_sortArrow('produto')}',
+                              'Produto${_c.sortArrow('produto')}',
                               4,
-                              () => _toggleSort('produto'),
+                              () => _c.toggleSort('produto'),
                             ),
                             _headerCell(
-                              'Data${_sortArrow('validade')}',
+                              'Data${_c.sortArrow('validade')}',
                               2,
-                              () => _toggleSort('validade'),
+                              () => _c.toggleSort('validade'),
                               align: TextAlign.right,
                             ),
                           ],
                         ),
                       ),
                       Expanded(
-                        child: _loading
+                        child: _c.loading
                             ? const LoadingIndicator()
                             : sorted.isEmpty
                             ? const Center(
@@ -1156,26 +1051,26 @@ class ProdutosScreenState extends State<ProdutosScreen>
                     children: [
                       ListTile(
                         leading: Checkbox(
-                          value: _filtrosLocal.isEmpty,
+                          value: _c.filtrosLocal.isEmpty,
                           onChanged: (_) {
-                            setState(() => _filtrosLocal.clear());
+                            _c.clearLocalFilters();
                             setSheetState(() {});
                           },
                         ),
                         title: const Text('Todos'),
                         onTap: () {
-                          setState(() => _filtrosLocal.clear());
+                          _c.clearLocalFilters();
                           setSheetState(() {});
                         },
                       ),
-                      ..._locais.where((l) => l.ativo).map((l) {
-                        final sel = _filtrosLocal.contains(l.nome);
+                      ..._c.locais.where((l) => l.ativo).map((l) {
+                        final sel = _c.filtrosLocal.contains(l.nome);
                         return ListTile(
                           leading: Checkbox(
                             value: sel,
                             activeColor: AppColors.primary,
                             onChanged: (_) {
-                              _toggleLocalFilter(l.nome);
+                              _c.toggleLocalFilter(l.nome);
                               setSheetState(() {});
                             },
                           ),
@@ -1189,7 +1084,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                                 : null,
                           ),
                           onTap: () {
-                            _toggleLocalFilter(l.nome);
+                            _c.toggleLocalFilter(l.nome);
                             setSheetState(() {});
                           },
                         );
@@ -1208,7 +1103,8 @@ class ProdutosScreenState extends State<ProdutosScreen>
 
   @override
   void dispose() {
-    dataChanged.removeListener(_handleDataChanged);
+    _c.removeListener(_onControllerChanged);
+    _c.dispose();
     _dataInicialCtrl.dispose();
     _dataFinalCtrl.dispose();
     super.dispose();

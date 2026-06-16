@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../storage/storage.dart';
+import '../controllers/configuracao_controller.dart';
 import '../theme/app_colors.dart';
 
 class ConfiguracaoScreen extends StatelessWidget {
@@ -21,7 +21,7 @@ class ConfiguracaoScreen extends StatelessWidget {
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
-              await clearAllData();
+              await const ConfiguracaoController().clearAll();
               if (ctx.mounted) Navigator.pop(ctx);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/local.dart';
-import '../models/produto.dart';
-import '../storage/storage.dart';
+import '../controllers/cadastro_controller.dart';
 import '../utils/date_utils.dart' as du;
-import '../utils/id.dart';
 import '../theme/app_colors.dart';
 
 class CadastroScreen extends StatefulWidget {
@@ -14,7 +11,7 @@ class CadastroScreen extends StatefulWidget {
 }
 
 class CadastroScreenState extends State<CadastroScreen> {
-  List<Local> _locais = [];
+  late final CadastroController _c;
   String _localId = '';
   String _localNome = '';
   final _quantidadeCtrl = TextEditingController();
@@ -26,27 +23,22 @@ class CadastroScreenState extends State<CadastroScreen> {
   @override
   void initState() {
     super.initState();
-    dataChanged.addListener(_handleDataChanged);
-    _loadLocais();
+    _c = CadastroController()..addListener(_onControllerChanged);
+    _c.load();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadLocais();
+    _c.load();
   }
 
-  void _handleDataChanged() {
-    if (mounted) refresh();
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> refresh() async {
-    await _loadLocais();
-  }
-
-  Future<void> _loadLocais() async {
-    final locs = await getLocaisAtivos();
-    if (mounted) setState(() => _locais = locs);
+    await _c.load();
   }
 
   Future<void> _handleSave() async {
@@ -79,17 +71,14 @@ class CadastroScreenState extends State<CadastroScreen> {
       return;
     }
 
-    await addProduto(
-      Produto(
-        id: generateId(),
-        localId: _localId,
-        localNome: _localNome,
-        quantidade: int.parse(_quantidadeCtrl.text),
-        nome: _nomeCtrl.text.trim(),
-        validade: _validadeCtrl.text,
-        situacao: _situacao,
-        status: _status,
-      ),
+    await _c.addProduto(
+      localId: _localId,
+      localNome: _localNome,
+      quantidade: int.parse(_quantidadeCtrl.text),
+      nome: _nomeCtrl.text.trim(),
+      validade: _validadeCtrl.text,
+      situacao: _situacao,
+      status: _status,
     );
 
     if (mounted) {
@@ -158,13 +147,13 @@ class CadastroScreenState extends State<CadastroScreen> {
                   'Selecione o local...',
                   style: TextStyle(color: AppColors.textMuted),
                 ),
-                items: _locais
+                items: _c.locais
                     .map(
                       (l) => DropdownMenuItem(value: l.id, child: Text(l.nome)),
                     )
                     .toList(),
                 onChanged: (v) {
-                  final loc = _locais.firstWhere((l) => l.id == v);
+                  final loc = _c.locais.firstWhere((l) => l.id == v);
                   setState(() {
                     _localId = loc.id;
                     _localNome = loc.nome;
@@ -326,7 +315,8 @@ class CadastroScreenState extends State<CadastroScreen> {
 
   @override
   void dispose() {
-    dataChanged.removeListener(_handleDataChanged);
+    _c.removeListener(_onControllerChanged);
+    _c.dispose();
     _quantidadeCtrl.dispose();
     _nomeCtrl.dispose();
     _validadeCtrl.dispose();

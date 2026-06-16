@@ -1,79 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/services.dart';
-import 'package:excel/excel.dart' as xl;
-import '../models/local.dart';
-import '../models/produto.dart';
-import '../storage/storage.dart';
-import '../utils/id.dart';
+import '../controllers/importar_controller.dart';
 import '../theme/app_colors.dart';
-
-String _normalizeYear(String yearStr) {
-  if (yearStr.length <= 2) {
-    final y = int.tryParse(yearStr) ?? 0;
-    return (y <= 30 ? 2000 + y : 1900 + y).toString();
-  }
-  return yearStr;
-}
-
-String _pad2(int v) => v.toString().padLeft(2, '0');
-
-/// Converte o valor da celula de vencimento para DD/MM/AAAA, aceitando data
-/// nativa do Excel, numero serial (dias desde 1899-12-30) ou string.
-String parseExcelDate(Object? cell) {
-  if (cell == null) return '';
-  if (cell is xl.DateCellValue) {
-    return '${_pad2(cell.day)}/${_pad2(cell.month)}/${cell.year}';
-  }
-  if (cell is xl.DateTimeCellValue) {
-    return '${_pad2(cell.day)}/${_pad2(cell.month)}/${cell.year}';
-  }
-  if (cell is xl.IntCellValue) {
-    final d = DateTime(1899, 12, 30).add(Duration(days: cell.value));
-    return '${_pad2(d.day)}/${_pad2(d.month)}/${d.year}';
-  }
-  if (cell is xl.DoubleCellValue) {
-    final d = DateTime(1899, 12, 30).add(Duration(days: cell.value.round()));
-    return '${_pad2(d.day)}/${_pad2(d.month)}/${d.year}';
-  }
-  final raw = cell is xl.TextCellValue
-      ? cell.value.toString()
-      : cell.toString();
-  final s = raw.trim();
-  if (s.isEmpty) return '';
-  final serial = num.tryParse(s);
-  if (serial != null) {
-    final d = DateTime(1899, 12, 30).add(Duration(days: serial.round()));
-    return '${_pad2(d.day)}/${_pad2(d.month)}/${d.year}';
-  }
-  if (s.contains('/')) {
-    final parts = s.split('/');
-    if (parts.length == 3) {
-      return '${parts[0].padLeft(2, '0')}/${parts[1].padLeft(2, '0')}/${_normalizeYear(parts[2])}';
-    }
-  }
-  if (s.contains('-')) {
-    final parts = s.split('-');
-    if (parts.length == 3) {
-      // ISO YYYY-MM-DD
-      return '${parts[2].padLeft(2, '0')}/${parts[1].padLeft(2, '0')}/${_normalizeYear(parts[0])}';
-    }
-  }
-  return s;
-}
-
-class _ImportRow {
-  final String predio;
-  final int quantidade;
-  final String produto;
-  final String vencimento;
-  _ImportRow({
-    required this.predio,
-    required this.quantidade,
-    required this.produto,
-    required this.vencimento,
-  });
-}
 
 class ImportarScreen extends StatefulWidget {
   const ImportarScreen({super.key});
@@ -84,12 +13,27 @@ class ImportarScreen extends StatefulWidget {
 
 class _ImportarScreenState extends State<ImportarScreen>
     with AutomaticKeepAliveClientMixin {
-  List<_ImportRow> _importedRows = [];
-  bool _imported = false;
-  bool _loading = false;
+  late final ImportarController _c;
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = ImportarController()..addListener(_onControllerChanged);
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _c.removeListener(_onControllerChanged);
+    _c.dispose();
+    super.dispose();
+  }
 
   Future<void> _handlePickFile() async {
     // 1. Define o grupo de arquivos permitidos (Excel)
@@ -119,127 +63,27 @@ class _ImportarScreenState extends State<ImportarScreen>
       return;
     }
 
-    // 4. Envia os bytes para a sua função de processamento existente
-    _parseExcel(bytes);
-  }
-
-  void _parseExcel(Uint8List bytes) {
-    final excel = xl.Excel.decodeBytes(bytes);
-    if (excel.tables.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Nenhuma planilha encontrada no arquivo.'),
-          ),
-        );
-      }
-      return;
+    // 4. Envia os bytes para o controller fazer o parse
+    final error = _c.parse(bytes);
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
-    final sheet = excel.tables.values.first;
-    if (sheet.rows.isEmpty) return;
-
-    final header = sheet.rows.first
-        .map((c) => (c?.value?.toString() ?? '').toLowerCase().trim())
-        .toList();
-    final predioIdx = header.indexOf('predio');
-    final qtdIdx = header.indexOf('quantidade');
-    final prodIdx = header.indexOf('produto');
-    final vencIdx = header.indexOf('vencimento');
-
-    if (predioIdx < 0 || qtdIdx < 0 || prodIdx < 0 || vencIdx < 0) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Colunas obrigatorias nao encontradas.'),
-          ),
-        );
-      }
-      return;
-    }
-
-    final rows = <_ImportRow>[];
-    for (var i = 1; i < sheet.rows.length; i++) {
-      final row = sheet.rows[i];
-      final predio = row.length > predioIdx
-          ? (row[predioIdx]?.value?.toString() ?? '')
-          : '';
-      final qtd = row.length > qtdIdx
-          ? (int.tryParse(row[qtdIdx]?.value?.toString() ?? '') ?? 0)
-          : 0;
-      final prod = row.length > prodIdx
-          ? (row[prodIdx]?.value?.toString() ?? '')
-          : '';
-      final venc = row.length > vencIdx
-          ? parseExcelDate(row[vencIdx]?.value)
-          : '';
-      if (predio.isNotEmpty && prod.isNotEmpty) {
-        rows.add(
-          _ImportRow(
-            predio: predio,
-            quantidade: qtd,
-            produto: prod,
-            vencimento: venc,
-          ),
-        );
-      }
-    }
-
-    setState(() {
-      _importedRows = rows;
-      _imported = false;
-    });
   }
 
   Future<void> _handleImport() async {
-    if (_importedRows.isEmpty) {
+    final count = await _c.import();
+    if (!mounted) return;
+    if (count < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Nenhum dado para importar.')),
       );
       return;
     }
-
-    setState(() => _loading = true);
-
-    final existingLocais = await getLocais();
-    final localMap = <String, Local>{
-      for (final l in existingLocais) l.nome.toLowerCase(): l,
-    };
-    final newLocais = <Local>[];
-    final newProdutos = <Produto>[];
-
-    for (final row in _importedRows) {
-      var local = localMap[row.predio.toLowerCase()];
-      if (local == null) {
-        local = Local(id: generateId(), nome: row.predio, ativo: true);
-        newLocais.add(local);
-        localMap[row.predio.toLowerCase()] = local;
-      }
-      newProdutos.add(
-        Produto(
-          id: generateId(),
-          localId: local.id,
-          localNome: local.nome,
-          quantidade: row.quantidade,
-          nome: row.produto,
-          validade: row.vencimento,
-        ),
-      );
-    }
-
-    await importBatch(newLocais, newProdutos);
-    setState(() {
-      _imported = true;
-      _loading = false;
-    });
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${newProdutos.length} produto(s) importado(s) com sucesso!',
-          ),
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$count produto(s) importado(s) com sucesso!')),
+    );
   }
 
   @override
@@ -275,9 +119,9 @@ class _ImportarScreenState extends State<ImportarScreen>
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.all(12),
                   ),
-                  onPressed: _loading ? null : _handlePickFile,
+                  onPressed: _c.loading ? null : _handlePickFile,
                   child: Text(
-                    _loading ? 'Processando...' : 'Selecionar Arquivo',
+                    _c.loading ? 'Processando...' : 'Selecionar Arquivo',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -288,7 +132,7 @@ class _ImportarScreenState extends State<ImportarScreen>
             ],
           ),
         ),
-        if (_importedRows.isNotEmpty) ...[
+        if (_c.rows.isNotEmpty) ...[
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -296,28 +140,28 @@ class _ImportarScreenState extends State<ImportarScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Pre-visualizacao (${_importedRows.length} itens)',
+                  'Pre-visualizacao (${_c.rows.length} itens)',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (!_imported)
+                if (!_c.imported)
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: _loading ? null : _handleImport,
+                    onPressed: _c.loading ? null : _handleImport,
                     child: Text(
-                      _loading ? 'Importando...' : 'Confirmar Importacao',
+                      _c.loading ? 'Importando...' : 'Confirmar Importacao',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
                     ),
                   ),
-                if (_imported)
+                if (_c.imported)
                   Row(
                     children: [
                       const Text(
@@ -334,10 +178,7 @@ class _ImportarScreenState extends State<ImportarScreen>
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                         ),
-                        onPressed: () => setState(() {
-                          _importedRows = [];
-                          _imported = false;
-                        }),
+                        onPressed: _c.reset,
                         child: const Text(
                           'Nova Importacao',
                           style: TextStyle(
@@ -426,9 +267,9 @@ class _ImportarScreenState extends State<ImportarScreen>
                   ),
                   Expanded(
                     child: ListView.builder(
-                      itemCount: _importedRows.length,
+                      itemCount: _c.rows.length,
                       itemBuilder: (_, i) {
-                        final row = _importedRows[i];
+                        final row = _c.rows[i];
                         return Container(
                           decoration: const BoxDecoration(
                             border: Border(

@@ -8,10 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:open_filex_plus/open_filex_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/produto.dart';
-import '../models/local.dart';
-import '../storage/storage.dart';
 import '../utils/date_utils.dart' as du;
 import '../theme/app_colors.dart';
+import '../controllers/exportar_controller.dart';
 import '../widgets/loading_indicator.dart';
 import '../widgets/table_header_cell.dart';
 
@@ -23,16 +22,7 @@ class ExportarScreen extends StatefulWidget {
 }
 
 class _ExportarScreenState extends State<ExportarScreen> {
-  List<Produto> _produtos = [];
-  List<Local> _locais = [];
-  final List<String> _filtrosLocal = [];
-  String _filtroCondicao = '';
-  String _filtroStatus = '';
-  String _periodoInicio = '';
-  String _periodoFim = '';
-  String _sortField = 'validade';
-  bool _sortAsc = true;
-  bool _loading = true;
+  late final ExportarController _c;
   final _periodoInicioCtrl = TextEditingController();
   final _periodoFimCtrl = TextEditingController();
   final GlobalKey _captureKey = GlobalKey();
@@ -41,134 +31,35 @@ class _ExportarScreenState extends State<ExportarScreen> {
   @override
   void initState() {
     super.initState();
-    dataChanged.addListener(_handleDataChanged);
-    _loadData();
+    _c = ExportarController()..addListener(_onControllerChanged);
+    _c.load();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadData();
+    _c.load();
   }
 
   @override
   void dispose() {
-    dataChanged.removeListener(_handleDataChanged);
+    _c.removeListener(_onControllerChanged);
+    _c.dispose();
     _periodoInicioCtrl.dispose();
     _periodoFimCtrl.dispose();
     super.dispose();
   }
 
-  void _handleDataChanged() {
-    if (mounted) refresh();
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> refresh() async {
-    await _loadData();
-  }
-
-  Future<void> _loadData() async {
-    if (mounted && _produtos.isEmpty) setState(() => _loading = true);
-    final prods = await getProdutos();
-    final locs = await getLocais();
-    if (mounted) {
-      setState(() {
-        _produtos = prods;
-        _locais = locs;
-        _loading = false;
-      });
-    }
-  }
-
-  bool _isLocalAtivo(Produto p) {
-    for (final l in _locais) {
-      if (l.id == p.localId) return l.ativo;
-    }
-    for (final l in _locais) {
-      if (l.nome.toLowerCase() == p.localNome.toLowerCase()) return l.ativo;
-    }
-    return false;
-  }
-
-  List<Produto> get _filtered {
-    return _produtos.where((p) {
-      if (!_isLocalAtivo(p)) return false;
-      if (_filtrosLocal.isNotEmpty) {
-        if (!_filtrosLocal.any(
-          (f) => p.localNome.toLowerCase() == f.toLowerCase(),
-        )) {
-          return false;
-        }
-      }
-      if (_filtroCondicao.isNotEmpty && p.situacao != _filtroCondicao) {
-        return false;
-      }
-      if (_filtroCondicao == 'Vencido' &&
-          _filtroStatus.isNotEmpty &&
-          p.status != _filtroStatus) {
-        return false;
-      }
-      if (_periodoInicio.isNotEmpty && _periodoFim.isNotEmpty) {
-        final d = du.parseDate(p.validade);
-        final start = du.parseDate(_periodoInicio);
-        final end = du.parseDate(_periodoFim);
-        if (d != null && start != null && end != null) {
-          if (d.isBefore(start) || d.isAfter(end)) return false;
-        }
-      }
-      return true;
-    }).toList();
-  }
-
-  List<Produto> get _sorted {
-    final list = List<Produto>.from(_filtered);
-    list.sort((a, b) {
-      int cmp;
-      switch (_sortField) {
-        case 'local':
-          cmp = a.localNome.compareTo(b.localNome);
-        case 'qtd':
-          cmp = a.quantidade.compareTo(b.quantidade);
-        case 'produto':
-          cmp = a.nome.compareTo(b.nome);
-        case 'situacao':
-          cmp = a.situacao.compareTo(b.situacao);
-        case 'status':
-          cmp = a.status.compareTo(b.status);
-        default:
-          cmp = du.compareDates(a.validade, b.validade);
-      }
-      return _sortAsc ? cmp : -cmp;
-    });
-    return list;
-  }
-
-  void _toggleSort(String field) {
-    setState(() {
-      if (_sortField == field) {
-        _sortAsc = !_sortAsc;
-      } else {
-        _sortField = field;
-        _sortAsc = true;
-      }
-    });
-  }
-
-  String _sortArrow(String field) =>
-      _sortField == field ? (_sortAsc ? ' ▲' : ' ▼') : '';
-
-  void _toggleLocalFilter(String nome) {
-    setState(() {
-      if (_filtrosLocal.contains(nome)) {
-        _filtrosLocal.remove(nome);
-      } else {
-        _filtrosLocal.add(nome);
-      }
-    });
+    await _c.load();
   }
 
   Future<void> _openEditModal(Produto produto) async {
-    final locaisAtivos = _locais.where((l) => l.ativo).toList();
+    final locaisAtivos = _c.locais.where((l) => l.ativo).toList();
     String editLocalId = produto.localId;
     String editLocalNome = produto.localNome;
     String editNome = produto.nome;
@@ -404,7 +295,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                           );
                           return;
                         }
-                        await updateProduto(
+                        await _c.updateProduto(
                           produto.copyWith(
                             localId: editLocalId,
                             localNome: editLocalNome,
@@ -416,7 +307,6 @@ class _ExportarScreenState extends State<ExportarScreen> {
                           ),
                         );
                         if (ctx.mounted) Navigator.pop(ctx);
-                        _loadData();
                       },
                       child: const FittedBox(child: Text('Salvar')),
                     ),
@@ -444,10 +334,9 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                   foregroundColor: Colors.red,
                                 ),
                                 onPressed: () async {
-                                  await deleteProduto(produto.id);
+                                  await _c.deleteProduto(produto.id);
                                   if (c.mounted) Navigator.pop(c);
                                   if (ctx.mounted) Navigator.pop(ctx);
-                                  _loadData();
                                 },
                                 child: const FittedBox(child: Text('Remover')),
                               ),
@@ -598,7 +487,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
   }
 
   Future<void> _handleExport() async {
-    final sorted = _sorted;
+    final sorted = _c.sorted;
     if (sorted.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -777,12 +666,12 @@ class _ExportarScreenState extends State<ExportarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sorted = _sorted;
-    final localLabel = _filtrosLocal.isEmpty
+    final sorted = _c.sorted;
+    final localLabel = _c.filtrosLocal.isEmpty
         ? 'Todos'
-        : _filtrosLocal.length <= 2
-        ? _filtrosLocal.join(', ')
-        : '${_filtrosLocal.length} selecionados';
+        : _c.filtrosLocal.length <= 2
+        ? _c.filtrosLocal.join(', ')
+        : '${_c.filtrosLocal.length} selecionados';
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -846,9 +735,9 @@ class _ExportarScreenState extends State<ExportarScreen> {
                           SizedBox(
                             height: 34,
                             child: DropdownButtonFormField<String>(
-                              initialValue: _filtroCondicao.isEmpty
+                              initialValue: _c.filtroCondicao.isEmpty
                                   ? null
-                                  : _filtroCondicao,
+                                  : _c.filtroCondicao,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(
@@ -876,12 +765,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                   child: Text('Vencido'),
                                 ),
                               ],
-                              onChanged: (v) => setState(() {
-                                _filtroCondicao = v ?? '';
-                                if (_filtroCondicao != 'Vencido') {
-                                  _filtroStatus = '';
-                                }
-                              }),
+                              onChanged: (v) => _c.setFiltroCondicao(v ?? ''),
                             ),
                           ),
                         ],
@@ -903,9 +787,9 @@ class _ExportarScreenState extends State<ExportarScreen> {
                           SizedBox(
                             height: 34,
                             child: DropdownButtonFormField<String>(
-                              initialValue: _filtroStatus.isEmpty
+                              initialValue: _c.filtroStatus.isEmpty
                                   ? null
-                                  : _filtroStatus,
+                                  : _c.filtroStatus,
                               decoration: InputDecoration(
                                 border: const OutlineInputBorder(),
                                 contentPadding: const EdgeInsets.symmetric(
@@ -913,21 +797,21 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                   vertical: 4,
                                 ),
                                 isDense: true,
-                                enabled: _filtroCondicao == 'Vencido',
+                                enabled: _c.filtroCondicao == 'Vencido',
                               ),
                               hint: Text(
-                                _filtroCondicao == 'Vencido'
+                                _c.filtroCondicao == 'Vencido'
                                     ? 'Todos'
                                     : 'Apenas Vencido',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: _filtroCondicao == 'Vencido'
+                                  color: _c.filtroCondicao == 'Vencido'
                                       ? null
                                       : AppColors.textDisabled,
                                 ),
                               ),
                               isExpanded: true,
-                              items: _filtroCondicao == 'Vencido'
+                              items: _c.filtroCondicao == 'Vencido'
                                   ? const [
                                       DropdownMenuItem(
                                         value: '',
@@ -943,9 +827,8 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                       ),
                                     ]
                                   : null,
-                              onChanged: _filtroCondicao == 'Vencido'
-                                  ? (v) =>
-                                        setState(() => _filtroStatus = v ?? '')
+                              onChanged: _c.filtroCondicao == 'Vencido'
+                                  ? (v) => _c.setFiltroStatus(v ?? '')
                                   : null,
                             ),
                           ),
@@ -993,7 +876,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                         TextPosition(offset: masked.length),
                                       );
                                 }
-                                setState(() => _periodoInicio = masked);
+                                _c.setPeriodoInicio(masked);
                               },
                             ),
                           ),
@@ -1037,7 +920,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                         TextPosition(offset: masked.length),
                                       );
                                 }
-                                setState(() => _periodoFim = masked);
+                                _c.setPeriodoFim(masked);
                               },
                             ),
                           ),
@@ -1072,41 +955,41 @@ class _ExportarScreenState extends State<ExportarScreen> {
                       child: Row(
                         children: [
                           _headerCell(
-                            'Local${_sortArrow('local')}',
+                            'Local${_c.sortArrow('local')}',
                             2,
-                            () => _toggleSort('local'),
+                            () => _c.toggleSort('local'),
                           ),
                           _headerCell(
-                            'Qtd${_sortArrow('qtd')}',
+                            'Qtd${_c.sortArrow('qtd')}',
                             1,
-                            () => _toggleSort('qtd'),
+                            () => _c.toggleSort('qtd'),
                             align: TextAlign.center,
                           ),
                           _headerCell(
-                            'Produto${_sortArrow('produto')}',
+                            'Produto${_c.sortArrow('produto')}',
                             3,
-                            () => _toggleSort('produto'),
+                            () => _c.toggleSort('produto'),
                           ),
                           _headerCell(
-                            'Data${_sortArrow('validade')}',
+                            'Data${_c.sortArrow('validade')}',
                             2,
-                            () => _toggleSort('validade'),
+                            () => _c.toggleSort('validade'),
                           ),
                           _headerCell(
-                            'Situação${_sortArrow('situacao')}',
+                            'Situação${_c.sortArrow('situacao')}',
                             2,
-                            () => _toggleSort('situacao'),
+                            () => _c.toggleSort('situacao'),
                           ),
                           _headerCell(
-                            'Status${_sortArrow('status')}',
+                            'Status${_c.sortArrow('status')}',
                             2,
-                            () => _toggleSort('status'),
+                            () => _c.toggleSort('status'),
                           ),
                         ],
                       ),
                     ),
                     Expanded(
-                      child: _loading
+                      child: _c.loading
                           ? const LoadingIndicator()
                           : sorted.isEmpty
                           ? const Center(
@@ -1272,26 +1155,26 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 children: [
                   ListTile(
                     leading: Checkbox(
-                      value: _filtrosLocal.isEmpty,
+                      value: _c.filtrosLocal.isEmpty,
                       onChanged: (_) {
-                        setState(() => _filtrosLocal.clear());
+                        _c.clearLocalFilters();
                         setSheetState(() {});
                       },
                     ),
                     title: const Text('Todos'),
                     onTap: () {
-                      setState(() => _filtrosLocal.clear());
+                      _c.clearLocalFilters();
                       setSheetState(() {});
                     },
                   ),
-                  ..._locais.where((l) => l.ativo).map((l) {
-                    final sel = _filtrosLocal.contains(l.nome);
+                  ..._c.locais.where((l) => l.ativo).map((l) {
+                    final sel = _c.filtrosLocal.contains(l.nome);
                     return ListTile(
                       leading: Checkbox(
                         value: sel,
                         activeColor: AppColors.primary,
                         onChanged: (_) {
-                          _toggleLocalFilter(l.nome);
+                          _c.toggleLocalFilter(l.nome);
                           setSheetState(() {});
                         },
                       ),
@@ -1305,7 +1188,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             : null,
                       ),
                       onTap: () {
-                        _toggleLocalFilter(l.nome);
+                        _c.toggleLocalFilter(l.nome);
                         setSheetState(() {});
                       },
                     );

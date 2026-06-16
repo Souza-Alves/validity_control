@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/local.dart';
-import '../storage/storage.dart';
-import '../utils/id.dart';
+import '../controllers/locais_controller.dart';
 import '../theme/app_colors.dart';
 
 class LocaisScreen extends StatefulWidget {
@@ -13,7 +12,7 @@ class LocaisScreen extends StatefulWidget {
 
 class _LocaisScreenState extends State<LocaisScreen>
     with AutomaticKeepAliveClientMixin {
-  List<Local> _locais = [];
+  late final LocaisController _c;
   final _nomeController = TextEditingController();
   bool _ativo = true;
   String? _editingId;
@@ -24,21 +23,16 @@ class _LocaisScreenState extends State<LocaisScreen>
   @override
   void initState() {
     super.initState();
-    dataChanged.addListener(_handleDataChanged);
-    _loadLocais();
+    _c = LocaisController()..addListener(_onControllerChanged);
+    _c.load();
   }
 
-  void _handleDataChanged() {
-    if (mounted) refresh();
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> refresh() async {
-    await _loadLocais();
-  }
-
-  Future<void> _loadLocais() async {
-    final data = await getLocais();
-    if (mounted) setState(() => _locais = data);
+    await _c.load();
   }
 
   Future<void> _handleSave() async {
@@ -48,29 +42,16 @@ class _LocaisScreenState extends State<LocaisScreen>
       ).showSnackBar(const SnackBar(content: Text('Informe o nome do local.')));
       return;
     }
-    if (_editingId != null) {
-      await updateLocal(
-        Local(
-          id: _editingId!,
-          nome: _nomeController.text.trim(),
-          ativo: _ativo,
-        ),
-      );
-    } else {
-      await addLocal(
-        Local(
-          id: generateId(),
-          nome: _nomeController.text.trim(),
-          ativo: _ativo,
-        ),
-      );
-    }
+    await _c.save(
+      id: _editingId,
+      nome: _nomeController.text.trim(),
+      ativo: _ativo,
+    );
     _nomeController.clear();
     setState(() {
       _ativo = true;
       _editingId = null;
     });
-    _loadLocais();
   }
 
   void _handleEdit(Local local) {
@@ -95,9 +76,8 @@ class _LocaisScreenState extends State<LocaisScreen>
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
-              await deleteLocal(id);
+              await _c.delete(id);
               if (ctx.mounted) Navigator.pop(ctx);
-              _loadLocais();
             },
             child: const Text('Excluir'),
           ),
@@ -219,7 +199,7 @@ class _LocaisScreenState extends State<LocaisScreen>
           ),
           // List
           Expanded(
-            child: _locais.isEmpty
+            child: _c.locais.isEmpty
                 ? const Center(
                     child: Text(
                       'Nenhum local cadastrado',
@@ -228,9 +208,9 @@ class _LocaisScreenState extends State<LocaisScreen>
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.all(8),
-                    itemCount: _locais.length,
+                    itemCount: _c.locais.length,
                     itemBuilder: (_, i) {
-                      final item = _locais[i];
+                      final item = _c.locais[i];
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: Padding(
@@ -312,7 +292,8 @@ class _LocaisScreenState extends State<LocaisScreen>
 
   @override
   void dispose() {
-    dataChanged.removeListener(_handleDataChanged);
+    _c.removeListener(_onControllerChanged);
+    _c.dispose();
     _nomeController.dispose();
     super.dispose();
   }
