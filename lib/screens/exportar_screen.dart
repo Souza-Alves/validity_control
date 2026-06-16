@@ -1100,7 +1100,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                           horizontal: 8,
                         ),
                         child: Text(
-                          'Total: ${sorted.length} produto(s)',
+                          'Total: ${sorted.fold<int>(0, (s, p) => s + p.quantidade)} produto(s)',
                           textAlign: TextAlign.right,
                           style: const TextStyle(
                             fontSize: 12,
