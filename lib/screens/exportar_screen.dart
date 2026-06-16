@@ -165,6 +165,296 @@ class _ExportarScreenState extends State<ExportarScreen> {
     });
   }
 
+  Future<void> _openEditModal(Produto produto) async {
+    final locaisAtivos = _locais.where((l) => l.ativo).toList();
+    String editLocalId = produto.localId;
+    String editLocalNome = produto.localNome;
+    String editNome = produto.nome;
+    String editValidade = produto.validade;
+    String editQuantidade = produto.quantidade.toString();
+    String editSituacao = produto.situacao;
+    String editStatus = produto.status;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Editar Produto', textAlign: TextAlign.center),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Localizacao:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  initialValue: locaisAtivos.any((l) => l.id == editLocalId)
+                      ? editLocalId
+                      : null,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  items: locaisAtivos
+                      .map(
+                        (l) =>
+                            DropdownMenuItem(value: l.id, child: Text(l.nome)),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    final loc = locaisAtivos.firstWhere((l) => l.id == v);
+                    setDialogState(() {
+                      editLocalId = loc.id;
+                      editLocalNome = loc.nome;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Produto:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
+                const SizedBox(height: 4),
+                TextFormField(
+                  initialValue: editNome,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  onChanged: (v) => editNome = v,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Validade:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
+                const SizedBox(height: 4),
+                TextFormField(
+                  initialValue: editValidade,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'DD/MM/AAAA',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  maxLength: 10,
+                  onChanged: (v) {
+                    final masked = du.applyDateMask(v);
+                    editValidade = masked;
+                  },
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Quantidade:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
+                const SizedBox(height: 4),
+                TextFormField(
+                  initialValue: editQuantidade,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) => editQuantidade = v,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Situacao:',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  initialValue: editSituacao.isEmpty ? null : editSituacao,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  hint: const Text('Selecione'),
+                  items: const [
+                    DropdownMenuItem(value: '', child: Text('Nenhum')),
+                    DropdownMenuItem(value: 'Vendido', child: Text('Vendido')),
+                    DropdownMenuItem(value: 'Vencido', child: Text('Vencido')),
+                  ],
+                  onChanged: (v) => setDialogState(() {
+                    editSituacao = v ?? '';
+                    if (editSituacao != 'Vencido') editStatus = '';
+                  }),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Status:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: editSituacao == 'Vencido'
+                        ? const Color(0xFF666666)
+                        : const Color(0xFFBBBBBB),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  initialValue: editStatus.isEmpty ? null : editStatus,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    enabled: editSituacao == 'Vencido',
+                  ),
+                  hint: Text(
+                    editSituacao == 'Vencido'
+                        ? 'Selecione'
+                        : 'Disponivel apenas para Vencido',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  items: editSituacao == 'Vencido'
+                      ? const [
+                          DropdownMenuItem(value: '', child: Text('Nenhum')),
+                          DropdownMenuItem(
+                            value: 'Baixado',
+                            child: Text('Baixado'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Pendente',
+                            child: Text('Pendente'),
+                          ),
+                        ]
+                      : null,
+                  onChanged: editSituacao == 'Vencido'
+                      ? (v) => setDialogState(() => editStatus = v ?? '')
+                      : null,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimaryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () async {
+                        if (editNome.trim().isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Nome do produto e obrigatorio.'),
+                            ),
+                          );
+                          return;
+                        }
+                        if (editValidade.trim().isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Data de validade e obrigatoria.'),
+                            ),
+                          );
+                          return;
+                        }
+                        final qty = int.tryParse(editQuantidade);
+                        if (qty == null || qty < 0) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Quantidade invalida.'),
+                            ),
+                          );
+                          return;
+                        }
+                        await updateProduto(
+                          produto.copyWith(
+                            localId: editLocalId,
+                            localNome: editLocalNome,
+                            nome: editNome,
+                            validade: editValidade,
+                            quantidade: qty,
+                            situacao: editSituacao,
+                            status: editSituacao == 'Vencido' ? editStatus : '',
+                          ),
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        _loadData();
+                      },
+                      child: const FittedBox(child: Text('Salvar')),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFFE74C3C),
+                      ),
+                      onPressed: () {
+                        showDialog(
+                          context: ctx,
+                          builder: (c) => AlertDialog(
+                            title: const Text('Confirmar remoção'),
+                            content: Text(
+                              'Deseja remover o produto "${produto.nome}"?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(c),
+                                child: const FittedBox(child: Text('Cancelar')),
+                              ),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                ),
+                                onPressed: () async {
+                                  await deleteProduto(produto.id);
+                                  if (c.mounted) Navigator.pop(c);
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  _loadData();
+                                },
+                                child: const FittedBox(child: Text('Remover')),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: const FittedBox(child: Text('Remover')),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const FittedBox(child: Text('Cancelar')),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _escapeHtml(String value) {
     return value
         .replaceAll('&', '&amp;')
@@ -307,31 +597,65 @@ class _ExportarScreenState extends State<ExportarScreen> {
     final today = DateTime.now();
     final buffer = StringBuffer();
     buffer.writeln('<!DOCTYPE html>');
-    buffer.writeln('<html><body style="margin:0;padding:0;font-family:Arial,sans-serif;color:#222;">');
+    buffer.writeln(
+      '<html><body style="margin:0;padding:0;font-family:Arial,sans-serif;color:#222;">',
+    );
     buffer.writeln('<div style="padding:16px;">');
-    buffer.writeln('<p style="margin:0 0 8px 0;font-size:16px;font-weight:bold;">Relatorio de Produtos - Controle de Validades</p>');
-    buffer.writeln('<p style="margin:0 0 12px 0;font-size:12px;color:#555;">Gerado em ${du.formatDate(today)}</p>');
-    buffer.writeln('<table role="presentation" cellspacing="0" cellpadding="6" border="1" style="border-collapse:collapse;width:100%;font-size:12px;border-color:#cccccc;">');
+    buffer.writeln(
+      '<p style="margin:0 0 8px 0;font-size:16px;font-weight:bold;">Relatorio de Produtos - Controle de Validades</p>',
+    );
+    buffer.writeln(
+      '<p style="margin:0 0 12px 0;font-size:12px;color:#555;">Gerado em ${du.formatDate(today)}</p>',
+    );
+    buffer.writeln(
+      '<table role="presentation" cellspacing="0" cellpadding="6" border="1" style="border-collapse:collapse;width:100%;font-size:12px;border-color:#cccccc;">',
+    );
     buffer.writeln('<tr style="background-color:#f4f4f4;">');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Local</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Qtd</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Produto</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Validade</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Situacao</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Status</th>');
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Local</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Qtd</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Produto</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Validade</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Situacao</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Status</th>',
+    );
     buffer.writeln('</tr>');
     for (final p in sorted) {
       buffer.writeln('<tr>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.localNome)}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${p.quantidade}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.nome)}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.validade)}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>');
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.localNome)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${p.quantidade}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.nome)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.validade)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
+      );
       buffer.writeln('</tr>');
     }
     buffer.writeln('</table>');
-    buffer.writeln('<p style="margin:12px 0 0 0;font-size:12px;"><strong>Total:</strong> ${sorted.length} produto(s)</p>');
+    buffer.writeln(
+      '<p style="margin:12px 0 0 0;font-size:12px;"><strong>Total:</strong> ${sorted.length} produto(s)</p>',
+    );
     buffer.writeln('</div></body></html>');
 
     final body = buffer.toString();
@@ -794,71 +1118,86 @@ class _ExportarScreenState extends State<ExportarScreen> {
                               itemCount: sorted.length,
                               itemBuilder: (_, i) {
                                 final item = sorted[i];
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    border: Border(
-                                      bottom: BorderSide(
-                                        color: Color(0xFFEEEEEE),
+                                return InkWell(
+                                  onTap: () => _openEditModal(item),
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: Color(0xFFEEEEEE),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                    horizontal: 8,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          item.localNome,
-                                          style: const TextStyle(fontSize: 11),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                      horizontal: 8,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            item.localNome,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 1,
-                                        child: Text(
-                                          '${item.quantidade}',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(fontSize: 11),
+                                        Expanded(
+                                          flex: 1,
+                                          child: Text(
+                                            '${item.quantidade}',
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          item.nome,
-                                          style: const TextStyle(fontSize: 11),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            item.nome,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          du.formatShort(item.validade),
-                                          style: const TextStyle(fontSize: 11),
-                                          maxLines: 1,
-                                          softWrap: false,
-                                          overflow: TextOverflow.visible,
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            du.formatShort(item.validade),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                            maxLines: 1,
+                                            softWrap: false,
+                                            overflow: TextOverflow.visible,
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          item.situacao.isEmpty
-                                              ? '-'
-                                              : item.situacao,
-                                          style: const TextStyle(fontSize: 11),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            item.situacao.isEmpty
+                                                ? '-'
+                                                : item.situacao,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          item.status.isEmpty
-                                              ? '-'
-                                              : item.status,
-                                          style: const TextStyle(fontSize: 11),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            item.status.isEmpty
+                                                ? '-'
+                                                : item.status,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
