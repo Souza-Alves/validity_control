@@ -497,6 +497,13 @@ class ProdutosScreenState extends State<ProdutosScreen>
       return;
     }
 
+    const thLeft = 'style="padding:8px;text-align:left;font-weight:bold;"';
+    const thCenter = 'style="padding:8px;text-align:center;font-weight:bold;"';
+    const tdLeft =
+        'style="padding:8px;text-align:left;border-top:1px solid #e0e0e0;"';
+    const tdCenter =
+        'style="padding:8px;text-align:center;border-top:1px solid #e0e0e0;"';
+
     final buffer = StringBuffer();
     buffer.writeln('<!DOCTYPE html>');
     buffer.writeln(
@@ -504,53 +511,35 @@ class ProdutosScreenState extends State<ProdutosScreen>
     );
     buffer.writeln('<div style="padding:16px;">');
     buffer.writeln(
-      '<p style="margin:0 0 8px 0;font-size:16px;font-weight:bold;">Produtos proximos ao vencimento</p>',
+      '<p style="margin:0 0 8px 0;font-size:16px;font-weight:bold;color:#4A8A1A;">Produtos proximos ao vencimento</p>',
     );
     buffer.writeln(
       '<p style="margin:0 0 12px 0;font-size:12px;color:#555;">Gerado em ${du.formatDate(todayStart)}</p>',
     );
     buffer.writeln(
-      '<table role="presentation" cellspacing="0" cellpadding="6" border="1" style="border-collapse:collapse;width:100%;font-size:12px;border-color:#cccccc;">',
+      '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-size:12px;border:1px solid #7CB24B;border-radius:8px;overflow:hidden;">',
     );
-    buffer.writeln('<tr style="background-color:#f4f4f4;">');
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Local</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Qtd</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Produto</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Validade</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Situacao</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Status</th>',
-    );
+    buffer.writeln('<tr style="background-color:#7CB24B;color:#ffffff;">');
+    buffer.writeln('<th $thLeft>Local</th>');
+    buffer.writeln('<th $thCenter>Qtd</th>');
+    buffer.writeln('<th $thLeft>Produto</th>');
+    buffer.writeln('<th $thLeft>Data</th>');
+    buffer.writeln('<th $thLeft>Situação</th>');
+    buffer.writeln('<th $thLeft>Status</th>');
     buffer.writeln('</tr>');
     for (final p in itens) {
       buffer.writeln('<tr>');
+      buffer.writeln('<td $tdLeft>${_escapeHtml(p.localNome)}</td>');
+      buffer.writeln('<td $tdCenter>${p.quantidade}</td>');
+      buffer.writeln('<td $tdLeft>${_escapeHtml(p.nome)}</td>');
       buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.localNome)}</td>',
+        '<td $tdLeft>${_escapeHtml(du.formatShort(p.validade))}</td>',
       );
       buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${p.quantidade}</td>',
+        '<td $tdLeft>${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
       );
       buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.nome)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.validade)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
+        '<td $tdLeft>${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
       );
       buffer.writeln('</tr>');
     }
@@ -566,14 +555,29 @@ class ProdutosScreenState extends State<ProdutosScreen>
       'Produtos proximos ao vencimento',
       'Gerado em ${du.formatDate(todayStart)}',
       '',
-      'Local | Qtd | Produto | Validade | Situacao | Status',
+      'Local | Qtd | Produto | Data | Situacao | Status',
       for (final p in itens)
-        '${p.localNome} | ${p.quantidade} | ${p.nome} | ${p.validade} | ${p.situacao.isEmpty ? '-' : p.situacao} | ${p.status.isEmpty ? '-' : p.status}',
+        '${p.localNome} | ${p.quantidade} | ${p.nome} | ${du.formatShort(p.validade)} | ${p.situacao.isEmpty ? '-' : p.situacao} | ${p.status.isEmpty ? '-' : p.status}',
       '',
       'Total: ${itens.length} produto(s)',
     ].join('\n');
     final subject =
         'Controle de Validades - Produtos proximos ao vencimento (${du.formatDate(todayStart)})';
+
+    // Android: abre um seletor (chooser) de apps de e-mail com o corpo em HTML.
+    if (Platform.isAndroid) {
+      try {
+        final ok = await const MethodChannel('email_sender').invokeMethod<bool>(
+          'sendEmail',
+          {
+            'subject': subject,
+            'htmlBody': body,
+            'plainBody': plainTextBody.trim(),
+          },
+        );
+        if (ok == true) return;
+      } catch (_) {}
+    }
 
     try {
       final capabilities = await FlutterEmailSender.getCapabilities();
