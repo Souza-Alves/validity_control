@@ -1087,6 +1087,28 @@ class _ExportarScreenState extends State<ExportarScreen> {
                               },
                             ),
                     ),
+                    if (!_c.loading)
+                      Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 8,
+                        ),
+                        child: Text(
+                          'Total: ${sorted.length} produto(s)',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
