@@ -131,6 +131,83 @@ class _MainScreenState extends State<MainScreen> {
     super.dispose();
   }
 
+  // Indice do item selecionado na barra inferior (Importar/Exportar -> "Dados").
+  int get _selectedNavIndex {
+    switch (_currentIndex) {
+      case 0:
+      case 1:
+      case 2:
+        return _currentIndex;
+      case 3: // Importar
+      case 4: // Exportar
+        return 3; // Dados
+      default: // 5 Configuracao
+        return 4;
+    }
+  }
+
+  void _onNavTap(int navIndex) {
+    switch (navIndex) {
+      case 0:
+        setState(() => _currentIndex = 0);
+        _produtosScreenKey.currentState?.refresh();
+        break;
+      case 1:
+        setState(() => _currentIndex = 1);
+        break;
+      case 2:
+        setState(() => _currentIndex = 2);
+        _cadastroScreenKey.currentState?.refresh();
+        break;
+      case 3:
+        _showDadosMenu();
+        break;
+      default: // Config
+        setState(() => _currentIndex = 5);
+        break;
+    }
+  }
+
+  Future<void> _showDadosMenu() async {
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Dados',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.upload_file, color: AppColors.primary),
+              title: const Text('Importacao'),
+              onTap: () => Navigator.pop(ctx, 3),
+            ),
+            ListTile(
+              leading: const Icon(Icons.ios_share, color: AppColors.primary),
+              title: const Text('Exportar'),
+              onTap: () => Navigator.pop(ctx, 4),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) {
+      setState(() => _currentIndex = selected);
+    }
+  }
+
   static const _titles = [
     'Produtos',
     'Locais',
@@ -186,18 +263,8 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (i) {
-          setState(() => _currentIndex = i);
-          switch (i) {
-            case 0:
-              _produtosScreenKey.currentState?.refresh();
-              break;
-            case 2:
-              _cadastroScreenKey.currentState?.refresh();
-              break;
-          }
-        },
+        currentIndex: _selectedNavIndex,
+        onTap: _onNavTap,
         type: BottomNavigationBarType.fixed,
         backgroundColor: AppColors.primary,
         selectedItemColor: AppColors.white,
@@ -208,8 +275,7 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Produtos'),
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Locais'),
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Cadastrar'),
-          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Importar'),
-          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Exportar'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Dados'),
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Config'),
         ],
       ),
