@@ -85,6 +85,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
   List<Produto> get _filtered {
     return _produtos.where((p) {
       if (!_isLocalAtivo(p)) return false;
+      if (p.situacao == 'Vendido' || p.situacao == 'Vencido') return false;
       if (_filtrosLocal.isNotEmpty) {
         if (!_filtrosLocal.any(
           (f) => p.localNome.toLowerCase() == f.toLowerCase(),
