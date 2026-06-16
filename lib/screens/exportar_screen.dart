@@ -11,7 +11,9 @@ import '../models/produto.dart';
 import '../models/local.dart';
 import '../storage/storage.dart';
 import '../utils/date_utils.dart' as du;
-import '../main.dart' show kPrimaryColor;
+import '../theme/app_colors.dart';
+import '../widgets/loading_indicator.dart';
+import '../widgets/table_header_cell.dart';
 
 class ExportarScreen extends StatefulWidget {
   const ExportarScreen({super.key});
@@ -187,7 +189,10 @@ class _ExportarScreenState extends State<ExportarScreen> {
               children: [
                 const Text(
                   'Localizacao:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
@@ -218,7 +223,10 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 const SizedBox(height: 12),
                 const Text(
                   'Produto:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -235,7 +243,10 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 const SizedBox(height: 12),
                 const Text(
                   'Validade:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -258,7 +269,10 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 const SizedBox(height: 12),
                 const Text(
                   'Quantidade:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -276,7 +290,10 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 const SizedBox(height: 12),
                 const Text(
                   'Situacao:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
@@ -306,8 +323,8 @@ class _ExportarScreenState extends State<ExportarScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     color: editSituacao == 'Vencido'
-                        ? const Color(0xFF666666)
-                        : const Color(0xFFBBBBBB),
+                        ? AppColors.textSecondary
+                        : AppColors.textDisabled,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -358,7 +375,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kPrimaryColor,
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                       ),
                       onPressed: () async {
@@ -407,7 +424,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                     TextButton(
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xFFE74C3C),
+                        backgroundColor: AppColors.danger,
                       ),
                       onPressed: () {
                         showDialog(
@@ -507,7 +524,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -787,7 +804,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Local:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -801,9 +818,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                 horizontal: 8,
                               ),
                               decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: const Color(0xFFCCCCCC),
-                                ),
+                                border: Border.all(color: AppColors.border),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -824,7 +839,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Condicao:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -881,7 +896,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Status:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -908,7 +923,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                   fontSize: 12,
                                   color: _filtroCondicao == 'Vencido'
                                       ? null
-                                      : const Color(0xFFBBBBBB),
+                                      : AppColors.textDisabled,
                                 ),
                               ),
                               isExpanded: true,
@@ -950,7 +965,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Periodo Inicio:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -994,7 +1009,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Periodo Fim:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -1042,14 +1057,14 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: kPrimaryColor),
+                  border: Border.all(color: AppColors.primary),
                   color: Colors.white,
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
                     Container(
-                      color: kPrimaryColor,
+                      color: AppColors.primary,
                       padding: const EdgeInsets.symmetric(
                         vertical: 10,
                         horizontal: 4,
@@ -1092,26 +1107,12 @@ class _ExportarScreenState extends State<ExportarScreen> {
                     ),
                     Expanded(
                       child: _loading
-                          ? const Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CircularProgressIndicator(
-                                    color: kPrimaryColor,
-                                  ),
-                                  SizedBox(height: 12),
-                                  Text(
-                                    'Carregando...',
-                                    style: TextStyle(color: Color(0xFF999999)),
-                                  ),
-                                ],
-                              ),
-                            )
+                          ? const LoadingIndicator()
                           : sorted.isEmpty
                           ? const Center(
                               child: Text(
                                 'Nenhum produto encontrado',
-                                style: TextStyle(color: Color(0xFF999999)),
+                                style: TextStyle(color: AppColors.textMuted),
                               ),
                             )
                           : ListView.builder(
@@ -1124,7 +1125,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                     decoration: const BoxDecoration(
                                       border: Border(
                                         bottom: BorderSide(
-                                          color: Color(0xFFEEEEEE),
+                                          color: AppColors.divider,
                                         ),
                                       ),
                                     ),
@@ -1215,7 +1216,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
               children: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(140, 40),
                   ),
@@ -1228,7 +1229,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 const Spacer(),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(170, 40),
                   ),
@@ -1252,24 +1253,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
     VoidCallback onTap, {
     TextAlign align = TextAlign.left,
   }) {
-    return Expanded(
-      flex: flex,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            text,
-            textAlign: align,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-            ),
-          ),
-        ),
-      ),
-    );
+    return TableHeaderCell(text: text, flex: flex, onTap: onTap, align: align);
   }
 
   void _showLocalFilterSheet() {
@@ -1305,7 +1289,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                     return ListTile(
                       leading: Checkbox(
                         value: sel,
-                        activeColor: kPrimaryColor,
+                        activeColor: AppColors.primary,
                         onChanged: (_) {
                           _toggleLocalFilter(l.nome);
                           setSheetState(() {});
@@ -1315,7 +1299,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                         l.nome,
                         style: sel
                             ? const TextStyle(
-                                color: Color(0xFF4A8A1A),
+                                color: AppColors.primaryDark,
                                 fontWeight: FontWeight.bold,
                               )
                             : null,

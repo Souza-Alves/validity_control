@@ -20,28 +20,28 @@ class Produto {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'localId': localId,
-        'localNome': localNome,
-        'quantidade': quantidade,
-        'nome': nome,
-        'validade': validade,
-        'situacao': situacao,
-        'status': status,
-      };
+    'id': id,
+    'localId': localId,
+    'localNome': localNome,
+    'quantidade': quantidade,
+    'nome': nome,
+    'validade': validade,
+    'situacao': situacao,
+    'status': status,
+  };
 
   factory Produto.fromJson(Map<String, dynamic> json) => Produto(
-        id: json['id'] as String? ?? '',
-        localId: json['localId'] as String? ?? '',
-        localNome: json['localNome'] as String? ?? '',
-        quantidade: (json['quantidade'] is int)
-            ? json['quantidade'] as int
-            : int.tryParse(json['quantidade']?.toString() ?? '0') ?? 0,
-        nome: json['nome'] as String? ?? '',
-        validade: json['validade'] as String? ?? '',
-        situacao: json['situacao'] as String? ?? '',
-        status: json['status'] as String? ?? '',
-      );
+    id: json['id'] as String? ?? '',
+    localId: json['localId'] as String? ?? '',
+    localNome: json['localNome'] as String? ?? '',
+    quantidade: (json['quantidade'] is int)
+        ? json['quantidade'] as int
+        : int.tryParse(json['quantidade']?.toString() ?? '0') ?? 0,
+    nome: json['nome'] as String? ?? '',
+    validade: json['validade'] as String? ?? '',
+    situacao: json['situacao'] as String? ?? '',
+    status: json['status'] as String? ?? '',
+  );
 
   Produto copyWith({
     String? localId,
@@ -51,15 +51,14 @@ class Produto {
     String? validade,
     String? situacao,
     String? status,
-  }) =>
-      Produto(
-        id: id,
-        localId: localId ?? this.localId,
-        localNome: localNome ?? this.localNome,
-        quantidade: quantidade ?? this.quantidade,
-        nome: nome ?? this.nome,
-        validade: validade ?? this.validade,
-        situacao: situacao ?? this.situacao,
-        status: status ?? this.status,
-      );
+  }) => Produto(
+    id: id,
+    localId: localId ?? this.localId,
+    localNome: localNome ?? this.localNome,
+    quantidade: quantidade ?? this.quantidade,
+    nome: nome ?? this.nome,
+    validade: validade ?? this.validade,
+    situacao: situacao ?? this.situacao,
+    status: status ?? this.status,
+  );
 }

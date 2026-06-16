@@ -8,8 +8,8 @@ class Local {
   Map<String, dynamic> toJson() => {'id': id, 'nome': nome, 'ativo': ativo};
 
   factory Local.fromJson(Map<String, dynamic> json) => Local(
-        id: json['id'] as String? ?? '',
-        nome: json['nome'] as String? ?? '',
-        ativo: json['ativo'] == true || json['ativo'] == 'true',
-      );
+    id: json['id'] as String? ?? '',
+    nome: json['nome'] as String? ?? '',
+    ativo: json['ativo'] == true || json['ativo'] == 'true',
+  );
 }

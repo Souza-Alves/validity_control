@@ -11,7 +11,9 @@ import '../models/produto.dart';
 import '../models/local.dart';
 import '../storage/storage.dart';
 import '../utils/date_utils.dart' as du;
-import '../main.dart' show kPrimaryColor;
+import '../theme/app_colors.dart';
+import '../widgets/loading_indicator.dart';
+import '../widgets/table_header_cell.dart';
 
 class ProdutosScreen extends StatefulWidget {
   const ProdutosScreen({super.key});
@@ -170,7 +172,10 @@ class ProdutosScreenState extends State<ProdutosScreen>
               children: [
                 const Text(
                   'Localizacao:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
@@ -201,7 +206,10 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 const SizedBox(height: 12),
                 const Text(
                   'Produto:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -218,7 +226,10 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 const SizedBox(height: 12),
                 const Text(
                   'Validade:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -241,7 +252,10 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 const SizedBox(height: 12),
                 const Text(
                   'Quantidade:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -259,7 +273,10 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 const SizedBox(height: 12),
                 const Text(
                   'Situacao:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
@@ -289,8 +306,8 @@ class ProdutosScreenState extends State<ProdutosScreen>
                   style: TextStyle(
                     fontSize: 13,
                     color: editSituacao == 'Vencido'
-                        ? const Color(0xFF666666)
-                        : const Color(0xFFBBBBBB),
+                        ? AppColors.textSecondary
+                        : AppColors.textDisabled,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -341,7 +358,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kPrimaryColor,
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                       ),
                       onPressed: () async {
@@ -390,7 +407,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                     TextButton(
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xFFE74C3C),
+                        backgroundColor: AppColors.danger,
                       ),
                       onPressed: () {
                         showDialog(
@@ -490,7 +507,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -586,31 +603,65 @@ class ProdutosScreenState extends State<ProdutosScreen>
 
     final buffer = StringBuffer();
     buffer.writeln('<!DOCTYPE html>');
-    buffer.writeln('<html><body style="margin:0;padding:0;font-family:Arial,sans-serif;color:#222;">');
+    buffer.writeln(
+      '<html><body style="margin:0;padding:0;font-family:Arial,sans-serif;color:#222;">',
+    );
     buffer.writeln('<div style="padding:16px;">');
-    buffer.writeln('<p style="margin:0 0 8px 0;font-size:16px;font-weight:bold;">Produtos proximos ao vencimento</p>');
-    buffer.writeln('<p style="margin:0 0 12px 0;font-size:12px;color:#555;">Gerado em ${du.formatDate(todayStart)}</p>');
-    buffer.writeln('<table role="presentation" cellspacing="0" cellpadding="6" border="1" style="border-collapse:collapse;width:100%;font-size:12px;border-color:#cccccc;">');
+    buffer.writeln(
+      '<p style="margin:0 0 8px 0;font-size:16px;font-weight:bold;">Produtos proximos ao vencimento</p>',
+    );
+    buffer.writeln(
+      '<p style="margin:0 0 12px 0;font-size:12px;color:#555;">Gerado em ${du.formatDate(todayStart)}</p>',
+    );
+    buffer.writeln(
+      '<table role="presentation" cellspacing="0" cellpadding="6" border="1" style="border-collapse:collapse;width:100%;font-size:12px;border-color:#cccccc;">',
+    );
     buffer.writeln('<tr style="background-color:#f4f4f4;">');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Local</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Qtd</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Produto</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Validade</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Situacao</th>');
-    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Status</th>');
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Local</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Qtd</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Produto</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Validade</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Situacao</th>',
+    );
+    buffer.writeln(
+      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Status</th>',
+    );
     buffer.writeln('</tr>');
     for (final p in itens) {
       buffer.writeln('<tr>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.localNome)}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${p.quantidade}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.nome)}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.validade)}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>');
-      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>');
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.localNome)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${p.quantidade}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.nome)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.validade)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
+      );
+      buffer.writeln(
+        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
+      );
       buffer.writeln('</tr>');
     }
     buffer.writeln('</table>');
-    buffer.writeln('<p style="margin:12px 0 0 0;font-size:12px;"><strong>Total:</strong> ${itens.length} produto(s)</p>');
+    buffer.writeln(
+      '<p style="margin:12px 0 0 0;font-size:12px;"><strong>Total:</strong> ${itens.length} produto(s)</p>',
+    );
     buffer.writeln('</div></body></html>');
 
     final body = buffer.toString();
@@ -744,7 +795,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                               'Local:',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF666666),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -758,9 +809,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                                   horizontal: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: const Color(0xFFCCCCCC),
-                                  ),
+                                  border: Border.all(color: AppColors.border),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -781,7 +830,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                               'Dias:',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF666666),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -817,7 +866,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                               'Data Inicial:',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF666666),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -861,7 +910,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                               'Data Final:',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF666666),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -912,14 +961,14 @@ class ProdutosScreenState extends State<ProdutosScreen>
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: kPrimaryColor),
+                    border: Border.all(color: AppColors.primary),
                     color: Colors.white,
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
                       Container(
-                        color: kPrimaryColor,
+                        color: AppColors.primary,
                         padding: const EdgeInsets.symmetric(
                           vertical: 10,
                           horizontal: 4,
@@ -953,28 +1002,12 @@ class ProdutosScreenState extends State<ProdutosScreen>
                       ),
                       Expanded(
                         child: _loading
-                            ? const Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    CircularProgressIndicator(
-                                      color: kPrimaryColor,
-                                    ),
-                                    SizedBox(height: 12),
-                                    Text(
-                                      'Carregando...',
-                                      style: TextStyle(
-                                        color: Color(0xFF999999),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
+                            ? const LoadingIndicator()
                             : sorted.isEmpty
                             ? const Center(
                                 child: Text(
                                   'Nenhum produto encontrado',
-                                  style: TextStyle(color: Color(0xFF999999)),
+                                  style: TextStyle(color: AppColors.textMuted),
                                 ),
                               )
                             : ListView.builder(
@@ -987,7 +1020,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                                       decoration: const BoxDecoration(
                                         border: Border(
                                           bottom: BorderSide(
-                                            color: Color(0xFFEEEEEE),
+                                            color: AppColors.divider,
                                           ),
                                         ),
                                       ),
@@ -1056,7 +1089,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 children: [
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryColor,
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(140, 40),
                     ),
@@ -1069,7 +1102,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                   const Spacer(),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryColor,
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(170, 40),
                     ),
@@ -1094,24 +1127,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
     VoidCallback onTap, {
     TextAlign align = TextAlign.left,
   }) {
-    return Expanded(
-      flex: flex,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            text,
-            textAlign: align,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-            ),
-          ),
-        ),
-      ),
-    );
+    return TableHeaderCell(text: text, flex: flex, onTap: onTap, align: align);
   }
 
   void _showLocalFilterSheet() {
@@ -1157,7 +1173,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                         return ListTile(
                           leading: Checkbox(
                             value: sel,
-                            activeColor: kPrimaryColor,
+                            activeColor: AppColors.primary,
                             onChanged: (_) {
                               _toggleLocalFilter(l.nome);
                               setSheetState(() {});
@@ -1167,7 +1183,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                             l.nome,
                             style: sel
                                 ? const TextStyle(
-                                    color: Color(0xFF4A8A1A),
+                                    color: AppColors.primaryDark,
                                     fontWeight: FontWeight.bold,
                                   )
                                 : null,

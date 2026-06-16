@@ -4,7 +4,7 @@ import '../models/produto.dart';
 import '../storage/storage.dart';
 import '../utils/date_utils.dart' as du;
 import '../utils/id.dart';
-import '../main.dart' show kPrimaryColor;
+import '../theme/app_colors.dart';
 
 class CadastroScreen extends StatefulWidget {
   const CadastroScreen({super.key});
@@ -136,13 +136,13 @@ class CadastroScreenState extends State<CadastroScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF333333),
+                  color: AppColors.textHeading,
                 ),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Localizacao',
-                style: TextStyle(fontSize: 14, color: Color(0xFF333333)),
+                style: TextStyle(fontSize: 14, color: AppColors.textHeading),
               ),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
@@ -156,7 +156,7 @@ class CadastroScreenState extends State<CadastroScreen> {
                 ),
                 hint: const Text(
                   'Selecione o local...',
-                  style: TextStyle(color: Color(0xFF999999)),
+                  style: TextStyle(color: AppColors.textMuted),
                 ),
                 items: _locais
                     .map(
@@ -174,7 +174,7 @@ class CadastroScreenState extends State<CadastroScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Quantidade',
-                style: TextStyle(fontSize: 14, color: Color(0xFF333333)),
+                style: TextStyle(fontSize: 14, color: AppColors.textHeading),
               ),
               const SizedBox(height: 4),
               TextField(
@@ -192,7 +192,7 @@ class CadastroScreenState extends State<CadastroScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Produto',
-                style: TextStyle(fontSize: 14, color: Color(0xFF333333)),
+                style: TextStyle(fontSize: 14, color: AppColors.textHeading),
               ),
               const SizedBox(height: 4),
               TextField(
@@ -209,7 +209,7 @@ class CadastroScreenState extends State<CadastroScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Validade',
-                style: TextStyle(fontSize: 14, color: Color(0xFF333333)),
+                style: TextStyle(fontSize: 14, color: AppColors.textHeading),
               ),
               const SizedBox(height: 4),
               TextField(
@@ -238,7 +238,7 @@ class CadastroScreenState extends State<CadastroScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Situacao',
-                style: TextStyle(fontSize: 14, color: Color(0xFF333333)),
+                style: TextStyle(fontSize: 14, color: AppColors.textHeading),
               ),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
@@ -252,7 +252,7 @@ class CadastroScreenState extends State<CadastroScreen> {
                 ),
                 hint: const Text(
                   'Selecione...',
-                  style: TextStyle(color: Color(0xFF999999)),
+                  style: TextStyle(color: AppColors.textMuted),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'Vendido', child: Text('Vendido')),
@@ -266,7 +266,7 @@ class CadastroScreenState extends State<CadastroScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Status',
-                style: TextStyle(fontSize: 14, color: Color(0xFF333333)),
+                style: TextStyle(fontSize: 14, color: AppColors.textHeading),
               ),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
@@ -283,7 +283,7 @@ class CadastroScreenState extends State<CadastroScreen> {
                   _situacao == 'Vencido'
                       ? 'Selecione...'
                       : 'Disponivel apenas para Vencido',
-                  style: const TextStyle(color: Color(0xFF999999)),
+                  style: const TextStyle(color: AppColors.textMuted),
                 ),
                 items: _situacao == 'Vencido'
                     ? const [
@@ -306,7 +306,7 @@ class CadastroScreenState extends State<CadastroScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.all(14),
                   ),

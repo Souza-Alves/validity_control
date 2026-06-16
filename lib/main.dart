@@ -2,14 +2,15 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'supabase/supabase_client.dart';
+import 'theme/app_colors.dart';
+import 'theme/app_text_styles.dart';
+import 'theme/app_theme.dart';
 import 'screens/produtos_screen.dart';
 import 'screens/locais_screen.dart';
 import 'screens/cadastro_screen.dart';
 import 'screens/importar_screen.dart';
 import 'screens/exportar_screen.dart';
 import 'screens/configuracao_screen.dart';
-
-const kPrimaryColor = Color(0xFF7CB24B);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,10 +30,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Controle de Validades',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: kPrimaryColor),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
       home: const SplashWrapper(),
     );
   }
@@ -60,7 +58,7 @@ class _SplashWrapperState extends State<SplashWrapper> {
   Widget build(BuildContext context) {
     if (!_ready) {
       return Scaffold(
-        backgroundColor: const Color(0xFF7CB24B),
+        backgroundColor: AppColors.primary,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -78,7 +76,7 @@ class _SplashWrapperState extends State<SplashWrapper> {
                     style: TextStyle(
                       fontSize: 40,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: AppColors.white,
                     ),
                   ),
                 ),
@@ -87,7 +85,7 @@ class _SplashWrapperState extends State<SplashWrapper> {
               const Text(
                 'Gerenciamento de Vencimentos',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 24, color: Color(0xFFE8F5E9)),
+                style: TextStyle(fontSize: 24, color: AppColors.splashSubtitle),
               ),
             ],
           ),
@@ -155,7 +153,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: kPrimaryColor,
+        backgroundColor: AppColors.primary,
         title: Row(
           children: [
             Image.asset(
@@ -165,14 +163,7 @@ class _MainScreenState extends State<MainScreen> {
               fit: BoxFit.contain,
             ),
             const Spacer(),
-            Text(
-              _titles[_currentIndex],
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(_titles[_currentIndex], style: AppTextStyles.appBarTitle),
           ],
         ),
       ),
@@ -181,16 +172,12 @@ class _MainScreenState extends State<MainScreen> {
           if (_offline)
             Container(
               width: double.infinity,
-              color: const Color(0xFFFF9800),
+              color: AppColors.offline,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: const Text(
                 'Problemas na conexao. As alteracoes serao realizadas offline e '
                 'adicionadas posteriormente quando houver conexao na base.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTextStyles.offlineBanner,
               ),
             ),
           Expanded(
@@ -212,9 +199,9 @@ class _MainScreenState extends State<MainScreen> {
           }
         },
         type: BottomNavigationBarType.fixed,
-        backgroundColor: kPrimaryColor,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: const Color(0xFF353535),
+        backgroundColor: AppColors.primary,
+        selectedItemColor: AppColors.white,
+        unselectedItemColor: AppColors.navUnselected,
         selectedFontSize: 11,
         unselectedFontSize: 11,
         items: const [

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/local.dart';
 import '../storage/storage.dart';
 import '../utils/id.dart';
-import '../main.dart' show kPrimaryColor;
+import '../theme/app_colors.dart';
 
 class LocaisScreen extends StatefulWidget {
   const LocaisScreen({super.key});
@@ -125,13 +125,13 @@ class _LocaisScreenState extends State<LocaisScreen>
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF333333),
+                    color: AppColors.textHeading,
                   ),
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   'Local',
-                  style: TextStyle(fontSize: 14, color: Color(0xFF333333)),
+                  style: TextStyle(fontSize: 14, color: AppColors.textHeading),
                 ),
                 const SizedBox(height: 4),
                 TextField(
@@ -155,14 +155,14 @@ class _LocaisScreenState extends State<LocaisScreen>
                         Text(
                           _ativo ? 'Ativo' : 'Inativo',
                           style: TextStyle(
-                            color: _ativo ? kPrimaryColor : Colors.red,
+                            color: _ativo ? AppColors.primary : Colors.red,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Switch(
                           value: _ativo,
                           onChanged: (v) => setState(() => _ativo = v),
-                          activeTrackColor: kPrimaryColor,
+                          activeTrackColor: AppColors.primary,
                         ),
                       ],
                     ),
@@ -174,7 +174,7 @@ class _LocaisScreenState extends State<LocaisScreen>
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimaryColor,
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                         ),
                         onPressed: _handleSave,
@@ -192,7 +192,7 @@ class _LocaisScreenState extends State<LocaisScreen>
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF888888),
+                            backgroundColor: AppColors.neutralButton,
                             foregroundColor: Colors.white,
                           ),
                           onPressed: () {
@@ -223,7 +223,7 @@ class _LocaisScreenState extends State<LocaisScreen>
                 ? const Center(
                     child: Text(
                       'Nenhum local cadastrado',
-                      style: TextStyle(color: Color(0xFF999999)),
+                      style: TextStyle(color: AppColors.textMuted),
                     ),
                   )
                 : ListView.builder(
@@ -254,7 +254,7 @@ class _LocaisScreenState extends State<LocaisScreen>
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: item.ativo
-                                            ? kPrimaryColor
+                                            ? AppColors.primary
                                             : Colors.red,
                                       ),
                                     ),
