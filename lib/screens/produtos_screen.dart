@@ -584,46 +584,33 @@ class ProdutosScreenState extends State<ProdutosScreen>
     }
 
     final buffer = StringBuffer();
-    buffer.writeln(
-      '<html><body style="font-family: Arial, sans-serif; color: #222; line-height: 1.4;">',
-    );
-    buffer.writeln('<p><strong>Produtos proximos ao vencimento:</strong></p>');
-    buffer.writeln(
-      '<p style="margin: 0 0 8px 0;">Gerado em ${du.formatDate(todayStart)}</p>',
-    );
-    buffer.writeln(
-      '<table style="border-collapse: collapse; width: 100%; font-size: 12px;">',
-    );
-    buffer.writeln(
-      '<tr style="background-color: #f4f4f4;"><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Local</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Qtd</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Produto</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Validade</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Situacao</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Status</th></tr>',
-    );
+    buffer.writeln('<!DOCTYPE html>');
+    buffer.writeln('<html><body style="margin:0;padding:0;font-family:Arial,sans-serif;color:#222;">');
+    buffer.writeln('<div style="padding:16px;">');
+    buffer.writeln('<p style="margin:0 0 8px 0;font-size:16px;font-weight:bold;">Produtos proximos ao vencimento</p>');
+    buffer.writeln('<p style="margin:0 0 12px 0;font-size:12px;color:#555;">Gerado em ${du.formatDate(todayStart)}</p>');
+    buffer.writeln('<table role="presentation" cellspacing="0" cellpadding="6" border="1" style="border-collapse:collapse;width:100%;font-size:12px;border-color:#cccccc;">');
+    buffer.writeln('<tr style="background-color:#f4f4f4;">');
+    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Local</th>');
+    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Qtd</th>');
+    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Produto</th>');
+    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Validade</th>');
+    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Situacao</th>');
+    buffer.writeln('<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Status</th>');
+    buffer.writeln('</tr>');
     for (final p in itens) {
       buffer.writeln('<tr>');
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.localNome)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${p.quantidade}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.nome)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.validade)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
-      );
+      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.localNome)}</td>');
+      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${p.quantidade}</td>');
+      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.nome)}</td>');
+      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.validade)}</td>');
+      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>');
+      buffer.writeln('<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>');
       buffer.writeln('</tr>');
     }
     buffer.writeln('</table>');
-    buffer.writeln(
-      '<p style="margin-top: 10px;"><strong>Total:</strong> ${itens.length} produto(s)</p>',
-    );
-    buffer.writeln('</body></html>');
+    buffer.writeln('<p style="margin:12px 0 0 0;font-size:12px;"><strong>Total:</strong> ${itens.length} produto(s)</p>');
+    buffer.writeln('</div></body></html>');
 
     final body = buffer.toString();
     final plainTextBody = [
