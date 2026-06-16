@@ -64,12 +64,13 @@ class ProdutosScreenState extends State<ProdutosScreen>
     if (mounted && _produtos.isEmpty) setState(() => _loading = true);
     final prods = await getProdutos();
     final locs = await getLocais();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _produtos = prods;
         _locais = locs;
         _loading = false;
       });
+    }
   }
 
   bool _isLocalAtivo(Produto p) {
@@ -89,8 +90,9 @@ class ProdutosScreenState extends State<ProdutosScreen>
       if (_filtrosLocal.isNotEmpty) {
         if (!_filtrosLocal.any(
           (f) => p.localNome.toLowerCase() == f.toLowerCase(),
-        ))
+        )) {
           return false;
+        }
       }
       if (_dataInicial.isNotEmpty && _dataFinal.isNotEmpty) {
         return du.isInRange(p.validade, _dataInicial, _dataFinal);
@@ -498,9 +500,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
             ),
           );
 
-          if (shouldOpenGallery == true &&
-              filePath != null &&
-              filePath.isNotEmpty) {
+          if (shouldOpenGallery == true && filePath.isNotEmpty) {
             try {
               final result = await OpenFilex.open(filePath);
               if (result.type == ResultType.done) {

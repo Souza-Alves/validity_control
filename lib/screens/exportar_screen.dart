@@ -69,12 +69,13 @@ class _ExportarScreenState extends State<ExportarScreen> {
     if (mounted && _produtos.isEmpty) setState(() => _loading = true);
     final prods = await getProdutos();
     final locs = await getLocais();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _produtos = prods;
         _locais = locs;
         _loading = false;
       });
+    }
   }
 
   bool _isLocalAtivo(Produto p) {
@@ -93,15 +94,18 @@ class _ExportarScreenState extends State<ExportarScreen> {
       if (_filtrosLocal.isNotEmpty) {
         if (!_filtrosLocal.any(
           (f) => p.localNome.toLowerCase() == f.toLowerCase(),
-        ))
+        )) {
           return false;
+        }
       }
-      if (_filtroCondicao.isNotEmpty && p.situacao != _filtroCondicao)
+      if (_filtroCondicao.isNotEmpty && p.situacao != _filtroCondicao) {
         return false;
+      }
       if (_filtroCondicao == 'Vencido' &&
           _filtroStatus.isNotEmpty &&
-          p.status != _filtroStatus)
+          p.status != _filtroStatus) {
         return false;
+      }
       if (_periodoInicio.isNotEmpty && _periodoFim.isNotEmpty) {
         final d = du.parseDate(p.validade);
         final start = du.parseDate(_periodoInicio);
@@ -223,9 +227,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
             ),
           );
 
-          if (shouldOpenGallery == true &&
-              filePath != null &&
-              filePath.isNotEmpty) {
+          if (shouldOpenGallery == true && filePath.isNotEmpty) {
             try {
               final result = await OpenFilex.open(filePath);
               if (result.type == ResultType.done) {
@@ -291,7 +293,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
   Future<void> _handleExport() async {
     final sorted = _sorted;
     if (sorted.isEmpty) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -299,6 +301,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
             ),
           ),
         );
+      }
       return;
     }
     final today = DateTime.now();
@@ -536,8 +539,9 @@ class _ExportarScreenState extends State<ExportarScreen> {
                               ],
                               onChanged: (v) => setState(() {
                                 _filtroCondicao = v ?? '';
-                                if (_filtroCondicao != 'Vencido')
+                                if (_filtroCondicao != 'Vencido') {
                                   _filtroStatus = '';
+                                }
                               }),
                             ),
                           ),

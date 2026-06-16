@@ -92,10 +92,11 @@ class CadastroScreenState extends State<CadastroScreen> {
       ),
     );
 
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Produto cadastrado com sucesso!')),
       );
+    }
     _quantidadeCtrl.clear();
     _nomeCtrl.clear();
     _validadeCtrl.clear();
