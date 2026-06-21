@@ -65,6 +65,33 @@ class RelatorioController extends ChangeNotifier {
     }).toList();
   }
 
+  static bool _isVencido(Produto p) =>
+      p.status == 'Pendente' || p.status == 'Baixado';
+
+  static int _porQuantidade(Produto a, Produto b) {
+    final q = b.quantidade.compareTo(a.quantidade);
+    if (q != 0) return q;
+    final n = a.nome.toLowerCase().compareTo(b.nome.toLowerCase());
+    if (n != 0) return n;
+    return a.localNome.toLowerCase().compareTo(b.localNome.toLowerCase());
+  }
+
+  /// Top N produtos vencidos de um local, ordenados por quantidade.
+  List<Produto> topVencidosLocal(String localNome, {int limit = 5}) {
+    final lista =
+        produtos
+            .where((p) => p.localNome == localNome && _isVencido(p))
+            .toList()
+          ..sort(_porQuantidade);
+    return lista.take(limit).toList();
+  }
+
+  /// Top N produtos vencidos de todos os locais, ordenados por quantidade.
+  List<Produto> topVencidosGlobal({int limit = 10}) {
+    final lista = produtos.where(_isVencido).toList()..sort(_porQuantidade);
+    return lista.take(limit).toList();
+  }
+
   int get geralTotal => resumos.fold(0, (s, r) => s + r.totalGeral);
   int get geralVendidos => resumos.fold(0, (s, r) => s + r.vendidos);
   int get geralPendentes => resumos.fold(0, (s, r) => s + r.pendentes);

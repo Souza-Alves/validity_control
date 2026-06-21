@@ -12,6 +12,7 @@ import 'screens/importar_screen.dart';
 import 'screens/exportar_screen.dart';
 import 'screens/configuracao_screen.dart';
 import 'screens/relatorio_screen.dart';
+import 'screens/top_vencidos_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -143,8 +144,9 @@ class _MainScreenState extends State<MainScreen> {
       case 3: // Importar
       case 4: // Exportar
         return 2; // Dados
-      case 6: // Relatorio
-        return 3; // Relatorio
+      case 6: // Relatorio Geral
+      case 7: // Top Vencidos
+        return 3; // Relatorios
       default: // 5 Configuracao
         return 4;
     }
@@ -163,7 +165,7 @@ class _MainScreenState extends State<MainScreen> {
         _showDadosMenu();
         break;
       case 3:
-        setState(() => _currentIndex = 6);
+        _showRelatoriosMenu();
         break;
       default: // Config
         setState(() => _currentIndex = 5);
@@ -218,6 +220,11 @@ class _MainScreenState extends State<MainScreen> {
     _SubmenuItem(Icons.ios_share, 'Exportar', 4),
   ]);
 
+  Future<void> _showRelatoriosMenu() => _showSubmenu('Relatorios', const [
+    _SubmenuItem(Icons.assessment, 'Geral', 6),
+    _SubmenuItem(Icons.emoji_events, 'Top Vencidos', 7),
+  ]);
+
   static const _titles = [
     'Produtos',
     'Locais',
@@ -226,6 +233,7 @@ class _MainScreenState extends State<MainScreen> {
     'Exportar',
     'Configuracao',
     'Relatorio',
+    'Top Vencidos',
   ];
 
   late final List<Widget> _screens = <Widget>[
@@ -236,6 +244,7 @@ class _MainScreenState extends State<MainScreen> {
     const ExportarScreen(),
     const ConfiguracaoScreen(),
     const RelatorioScreen(),
+    const TopVencidosScreen(),
   ];
 
   @override
@@ -287,7 +296,7 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Produtos'),
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Cadastro'),
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Dados'),
-          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Relatório'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Relatórios'),
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Config'),
         ],
       ),

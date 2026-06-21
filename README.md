@@ -30,9 +30,10 @@ sem internet, um aviso é exibido e as alterações são enfileiradas para subir
 
 ## Navegação (menu inferior)
 
-`Produtos` · `Cadastro` · `Dados` · `Relatório` · `Config`
+`Produtos` · `Cadastro` · `Dados` · `Relatórios` · `Config`
 
-Os itens **Cadastro** e **Dados** abrem um submenu (bottom sheet) com as respectivas telas.
+Os itens **Cadastro**, **Dados** e **Relatórios** abrem um submenu (bottom sheet) com as
+respectivas telas.
 
 ## Funcionalidades por tela
 
@@ -73,15 +74,24 @@ Lista completa para exportação/relatório.
   Android) com o corpo em **tabela HTML** no mesmo estilo/colunas da tela.
 - **Total** no rodapé somando as quantidades.
 
-### Relatório
+### Relatórios → Geral
 Visão consolidada por local, com o **mês atual** em destaque.
 - **Caixa "Geral (todos os locais)"** logo abaixo do mês: **Total Geral**,
   **Vendidos**, **Pendentes** e **Baixados**, somando todos os locais.
 - Um **card por local** com **Total Geral de Produtos** e a quebra em
   **Vendidos · Pendentes · Baixados**.
 - Todas as contagens são por **quantidade** e **clicáveis**: ao tocar em um número,
-  abre um modal com a **lista dos produtos** daquela contagem (na caixa Geral o local
-  é exibido em cada item).
+  abre um modal com a **lista dos produtos** daquela contagem, ordenada por quantidade
+  (na caixa Geral o local é exibido em cada item).
+
+### Relatórios → Top Vencidos
+Ranking dos produtos vencidos (status `Pendente` ou `Baixado`), com o **mês atual** em
+destaque.
+- **Caixa "Geral (todos os locais)"** logo abaixo do mês: **top 10** produtos mais
+  vencidos de todos os locais, ordenados por quantidade, mostrando posição (1º, 2º, 3º…),
+  produto, **prédio** e quantidade.
+- Um **card por local** com o **top 5** produtos vencidos daquele local, mostrando
+  posição, produto e quantidade.
 
 ### Config
 Configurações do aplicativo.
