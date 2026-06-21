@@ -78,6 +78,13 @@ class _RelatorioScreenState extends State<RelatorioScreen>
     List<Produto> itens, {
     bool showLocal = false,
   }) {
+    final ordenados = [...itens]
+      ..sort((a, b) {
+        final q = b.quantidade.compareTo(a.quantidade);
+        if (q != 0) return q;
+        return a.nome.toLowerCase().compareTo(b.nome.toLowerCase());
+      });
+    itens = ordenados;
     final totalQtd = itens.fold<int>(0, (s, p) => s + p.quantidade);
 
     showModalBottomSheet<void>(
