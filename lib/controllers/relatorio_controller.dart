@@ -3,7 +3,7 @@ import '../models/produto.dart';
 import '../storage/storage.dart' as storage;
 
 /// Categorias de contagem exibidas no relatorio.
-enum RelatorioCategoria { total, vendidos, pendentes, baixados }
+enum RelatorioCategoria { total, vendidos, pendentes, baixados, vencidos }
 
 /// Resumo agregado dos produtos de um local para a tela de Relatorio.
 class LocalResumo {
@@ -41,9 +41,34 @@ class RelatorioController extends ChangeNotifier {
           return p.status == 'Pendente';
         case RelatorioCategoria.baixados:
           return p.status == 'Baixado';
+        case RelatorioCategoria.vencidos:
+          return p.status == 'Pendente' || p.status == 'Baixado';
       }
     }).toList();
   }
+
+  /// Lista os produtos de uma categoria somando todos os locais.
+  List<Produto> itensGlobal(RelatorioCategoria categoria) {
+    return produtos.where((p) {
+      switch (categoria) {
+        case RelatorioCategoria.total:
+          return true;
+        case RelatorioCategoria.vendidos:
+          return p.situacao == 'Vendido';
+        case RelatorioCategoria.pendentes:
+          return p.status == 'Pendente';
+        case RelatorioCategoria.baixados:
+          return p.status == 'Baixado';
+        case RelatorioCategoria.vencidos:
+          return p.status == 'Pendente' || p.status == 'Baixado';
+      }
+    }).toList();
+  }
+
+  int get geralTotal => resumos.fold(0, (s, r) => s + r.totalGeral);
+  int get geralVendidos => resumos.fold(0, (s, r) => s + r.vendidos);
+  int get geralVencidos =>
+      resumos.fold(0, (s, r) => s + r.pendentes + r.baixados);
 
   RelatorioController() {
     storage.dataChanged.addListener(_onDataChanged);

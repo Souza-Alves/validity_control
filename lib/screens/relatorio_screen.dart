@@ -59,11 +59,25 @@ class _RelatorioScreenState extends State<RelatorioScreen>
         return 'Pendentes';
       case RelatorioCategoria.baixados:
         return 'Baixados';
+      case RelatorioCategoria.vencidos:
+        return 'Vencidos';
     }
   }
 
   void _showItens(String localNome, RelatorioCategoria cat) {
-    final itens = _c.itens(localNome, cat);
+    _showLista(localNome, cat, _c.itens(localNome, cat));
+  }
+
+  void _showItensGlobal(RelatorioCategoria cat) {
+    _showLista('Geral', cat, _c.itensGlobal(cat), showLocal: true);
+  }
+
+  void _showLista(
+    String titulo,
+    RelatorioCategoria cat,
+    List<Produto> itens, {
+    bool showLocal = false,
+  }) {
     final totalQtd = itens.fold<int>(0, (s, p) => s + p.quantidade);
 
     showModalBottomSheet<void>(
@@ -86,7 +100,7 @@ class _RelatorioScreenState extends State<RelatorioScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        localNome,
+                        titulo,
                         style: const TextStyle(
                           color: AppColors.white,
                           fontSize: 16,
@@ -119,7 +133,10 @@ class _RelatorioScreenState extends State<RelatorioScreen>
                             height: 1,
                             color: AppColors.divider,
                           ),
-                          itemBuilder: (_, i) => _ItemTile(produto: itens[i]),
+                          itemBuilder: (_, i) => _ItemTile(
+                            produto: itens[i],
+                            showLocal: showLocal,
+                          ),
                         ),
                 ),
               ],
@@ -167,6 +184,15 @@ class _RelatorioScreenState extends State<RelatorioScreen>
             const SizedBox(height: 8),
             _MesHeader(mes: mesAtual),
             const SizedBox(height: 16),
+            if (!_c.loading && _c.resumos.isNotEmpty) ...[
+              _GeralCard(
+                total: _c.geralTotal,
+                vendidos: _c.geralVendidos,
+                vencidos: _c.geralVencidos,
+                onTap: _showItensGlobal,
+              ),
+              const SizedBox(height: 16),
+            ],
             if (_c.resumos.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 48),
@@ -233,6 +259,134 @@ class _MesHeader extends StatelessWidget {
         const SizedBox(width: 8),
         const Expanded(child: Divider(color: AppColors.primary, thickness: 2)),
       ],
+    );
+  }
+}
+
+class _GeralCard extends StatelessWidget {
+  final int total;
+  final int vendidos;
+  final int vencidos;
+  final void Function(RelatorioCategoria) onTap;
+
+  const _GeralCard({
+    required this.total,
+    required this.vendidos,
+    required this.vencidos,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.divider),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: AppColors.primaryDark,
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            child: const Row(
+              children: [
+                Icon(Icons.summarize, color: AppColors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Geral (todos os locais)',
+                  style: TextStyle(
+                    color: AppColors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Total Geral\nde Produtos',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () => onTap(RelatorioCategoria.total),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(
+                            '$total',
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textHeading,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 96,
+                  color: AppColors.divider,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                Expanded(
+                  flex: 6,
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Total de Produtos',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _StatColumn(
+                            icon: Icons.shopping_cart,
+                            color: AppColors.primary,
+                            label: 'Vendidos',
+                            value: vendidos,
+                            onTap: () => onTap(RelatorioCategoria.vendidos),
+                          ),
+                          _StatColumn(
+                            icon: Icons.event_busy,
+                            color: AppColors.danger,
+                            label: 'Vencidos',
+                            value: vencidos,
+                            onTap: () => onTap(RelatorioCategoria.vencidos),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -421,11 +575,13 @@ class _StatColumn extends StatelessWidget {
 
 class _ItemTile extends StatelessWidget {
   final Produto produto;
-  const _ItemTile({required this.produto});
+  final bool showLocal;
+  const _ItemTile({required this.produto, this.showLocal = false});
 
   @override
   Widget build(BuildContext context) {
     final detalhes = <String>[
+      if (showLocal && produto.localNome.isNotEmpty) produto.localNome,
       'Validade: ${du.formatShort(produto.validade)}',
       if (produto.situacao.isNotEmpty) produto.situacao,
       if (produto.status.isNotEmpty) produto.status,
