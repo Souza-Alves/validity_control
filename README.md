@@ -76,8 +76,7 @@ Lista completa para exportação/relatório.
 ### Relatório
 Visão consolidada por local, com o **mês atual** em destaque.
 - **Caixa "Geral (todos os locais)"** logo abaixo do mês: **Total Geral**,
-  **Vendidos**, **Vencidos** (= baixados + pendentes), **Pendentes** e **Baixados**,
-  somando todos os locais.
+  **Vendidos**, **Pendentes** e **Baixados**, somando todos os locais.
 - Um **card por local** com **Total Geral de Produtos** e a quebra em
   **Vendidos · Pendentes · Baixados**.
 - Todas as contagens são por **quantidade** e **clicáveis**: ao tocar em um número,

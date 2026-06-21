@@ -188,7 +188,6 @@ class _RelatorioScreenState extends State<RelatorioScreen>
               _GeralCard(
                 total: _c.geralTotal,
                 vendidos: _c.geralVendidos,
-                vencidos: _c.geralVencidos,
                 pendentes: _c.geralPendentes,
                 baixados: _c.geralBaixados,
                 onTap: _showItensGlobal,
@@ -268,7 +267,6 @@ class _MesHeader extends StatelessWidget {
 class _GeralCard extends StatelessWidget {
   final int total;
   final int vendidos;
-  final int vencidos;
   final int pendentes;
   final int baixados;
   final void Function(RelatorioCategoria) onTap;
@@ -276,7 +274,6 @@ class _GeralCard extends StatelessWidget {
   const _GeralCard({
     required this.total,
     required this.vendidos,
-    required this.vencidos,
     required this.pendentes,
     required this.baixados,
     required this.onTap,
@@ -375,13 +372,6 @@ class _GeralCard extends StatelessWidget {
                             label: 'Vendidos',
                             value: vendidos,
                             onTap: () => onTap(RelatorioCategoria.vendidos),
-                          ),
-                          _StatColumn(
-                            icon: Icons.event_busy,
-                            color: AppColors.danger,
-                            label: 'Vencidos',
-                            value: vencidos,
-                            onTap: () => onTap(RelatorioCategoria.vencidos),
                           ),
                           _StatColumn(
                             icon: Icons.access_time,
