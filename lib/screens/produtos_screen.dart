@@ -9,6 +9,7 @@ import 'package:open_filex_plus/open_filex_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/produto.dart';
 import '../utils/date_utils.dart' as du;
+import '../utils/email_report.dart';
 import '../theme/app_colors.dart';
 import '../controllers/produtos_controller.dart';
 import '../widgets/loading_indicator.dart';
@@ -356,15 +357,6 @@ class ProdutosScreenState extends State<ProdutosScreen>
     );
   }
 
-  String _escapeHtml(String value) {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-  }
-
   Future<void> _salvarPrintTela() async {
     final contextBox = _captureKey.currentContext;
     final renderObject = contextBox?.findRenderObject();
@@ -497,83 +489,23 @@ class ProdutosScreenState extends State<ProdutosScreen>
       return;
     }
 
-    const thLeft = 'style="padding:8px;text-align:left;font-weight:bold;"';
-    const thCenter = 'style="padding:8px;text-align:center;font-weight:bold;"';
-    const tdLeft =
-        'style="padding:8px;text-align:left;border-top:1px solid #e0e0e0;"';
-    const tdCenter =
-        'style="padding:8px;text-align:center;border-top:1px solid #e0e0e0;"';
-
-    final buffer = StringBuffer();
-    buffer.writeln('<!DOCTYPE html>');
-    buffer.writeln(
-      '<html><body style="margin:0;padding:0;font-family:Arial,sans-serif;color:#222;">',
+    final report = buildEmailReport(
+      titulo: 'Produtos proximos ao vencimento',
+      data: todayStart,
+      itens: itens,
     );
-    buffer.writeln('<div style="padding:16px;">');
-    buffer.writeln(
-      '<p style="margin:0 0 8px 0;font-size:16px;font-weight:bold;color:#4A8A1A;">Produtos proximos ao vencimento</p>',
-    );
-    buffer.writeln(
-      '<p style="margin:0 0 12px 0;font-size:12px;color:#555;">Gerado em ${du.formatDate(todayStart)}</p>',
-    );
-    buffer.writeln(
-      '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-size:12px;border:1px solid #7CB24B;border-radius:8px;overflow:hidden;">',
-    );
-    buffer.writeln('<tr style="background-color:#7CB24B;color:#ffffff;">');
-    buffer.writeln('<th $thLeft>Local</th>');
-    buffer.writeln('<th $thCenter>Qtd</th>');
-    buffer.writeln('<th $thLeft>Produto</th>');
-    buffer.writeln('<th $thLeft>Data</th>');
-    buffer.writeln('<th $thLeft>Situação</th>');
-    buffer.writeln('<th $thLeft>Status</th>');
-    buffer.writeln('</tr>');
-    for (final p in itens) {
-      buffer.writeln('<tr>');
-      buffer.writeln('<td $tdLeft>${_escapeHtml(p.localNome)}</td>');
-      buffer.writeln('<td $tdCenter>${p.quantidade}</td>');
-      buffer.writeln('<td $tdLeft>${_escapeHtml(p.nome)}</td>');
-      buffer.writeln(
-        '<td $tdLeft>${_escapeHtml(du.formatShort(p.validade))}</td>',
-      );
-      buffer.writeln(
-        '<td $tdLeft>${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
-      );
-      buffer.writeln(
-        '<td $tdLeft>${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
-      );
-      buffer.writeln('</tr>');
-    }
-    buffer.writeln('</table>');
-    buffer.writeln(
-      '<p style="margin:12px 0 0 0;font-size:12px;"><strong>Total:</strong> ${itens.length} produto(s)</p>',
-    );
-    buffer.writeln('</div></body></html>');
-
-    final body = buffer.toString();
-    final plainTextBody = [
-      'Controle de Validades',
-      'Produtos proximos ao vencimento',
-      'Gerado em ${du.formatDate(todayStart)}',
-      '',
-      'Local | Qtd | Produto | Data | Situacao | Status',
-      for (final p in itens)
-        '${p.localNome} | ${p.quantidade} | ${p.nome} | ${du.formatShort(p.validade)} | ${p.situacao.isEmpty ? '-' : p.situacao} | ${p.status.isEmpty ? '-' : p.status}',
-      '',
-      'Total: ${itens.length} produto(s)',
-    ].join('\n');
+    final body = report.html;
+    final plainTextBody = report.plain;
     final subject =
         'Controle de Validades - Produtos proximos ao vencimento (${du.formatDate(todayStart)})';
 
-    // Android: abre um seletor (chooser) de apps de e-mail com o corpo em HTML.
+    // Android: abre um seletor (chooser) de apps de e-mail. O corpo visivel usa
+    // o HTML "rich" (negrito + quebras), que o Gmail renderiza.
     if (Platform.isAndroid) {
       try {
         final ok = await const MethodChannel('email_sender').invokeMethod<bool>(
           'sendEmail',
-          {
-            'subject': subject,
-            'htmlBody': body,
-            'plainBody': plainTextBody.trim(),
-          },
+          {'subject': subject, 'htmlBody': body, 'richBody': report.rich},
         );
         if (ok == true) return;
       } catch (_) {}

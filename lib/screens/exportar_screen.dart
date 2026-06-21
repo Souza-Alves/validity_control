@@ -9,6 +9,7 @@ import 'package:open_filex_plus/open_filex_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/produto.dart';
 import '../utils/date_utils.dart' as du;
+import '../utils/email_report.dart';
 import '../theme/app_colors.dart';
 import '../controllers/exportar_controller.dart';
 import '../widgets/loading_indicator.dart';
@@ -361,15 +362,6 @@ class _ExportarScreenState extends State<ExportarScreen> {
     );
   }
 
-  String _escapeHtml(String value) {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-  }
-
   Future<void> _salvarPrintTela() async {
     final contextBox = _captureKey.currentContext;
     final renderObject = contextBox?.findRenderObject();
@@ -501,83 +493,27 @@ class _ExportarScreenState extends State<ExportarScreen> {
       return;
     }
     final today = DateTime.now();
-    final buffer = StringBuffer();
-    buffer.writeln('<!DOCTYPE html>');
-    buffer.writeln(
-      '<html><body style="margin:0;padding:0;font-family:Arial,sans-serif;color:#222;">',
+    final report = buildEmailReport(
+      titulo: 'Relatorio de Produtos - Controle de Validades',
+      data: today,
+      itens: sorted,
     );
-    buffer.writeln('<div style="padding:16px;">');
-    buffer.writeln(
-      '<p style="margin:0 0 8px 0;font-size:16px;font-weight:bold;">Relatorio de Produtos - Controle de Validades</p>',
-    );
-    buffer.writeln(
-      '<p style="margin:0 0 12px 0;font-size:12px;color:#555;">Gerado em ${du.formatDate(today)}</p>',
-    );
-    buffer.writeln(
-      '<table role="presentation" cellspacing="0" cellpadding="6" border="1" style="border-collapse:collapse;width:100%;font-size:12px;border-color:#cccccc;">',
-    );
-    buffer.writeln('<tr style="background-color:#f4f4f4;">');
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Local</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Qtd</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Produto</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Validade</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Situacao</th>',
-    );
-    buffer.writeln(
-      '<th style="border:1px solid #cccccc;padding:8px;text-align:left;">Status</th>',
-    );
-    buffer.writeln('</tr>');
-    for (final p in sorted) {
-      buffer.writeln('<tr>');
-      buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.localNome)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${p.quantidade}</td>',
-      );
-      buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.nome)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.validade)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border:1px solid #cccccc;padding:8px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
-      );
-      buffer.writeln('</tr>');
-    }
-    buffer.writeln('</table>');
-    buffer.writeln(
-      '<p style="margin:12px 0 0 0;font-size:12px;"><strong>Total:</strong> ${sorted.length} produto(s)</p>',
-    );
-    buffer.writeln('</div></body></html>');
-
-    final body = buffer.toString();
-    final plainTextBody = [
-      'Controle de Validades',
-      'Relatorio de Produtos',
-      'Gerado em ${du.formatDate(today)}',
-      '',
-      'Local | Qtd | Produto | Validade | Situacao | Status',
-      for (final p in sorted)
-        '${p.localNome} | ${p.quantidade} | ${p.nome} | ${p.validade} | ${p.situacao.isEmpty ? '-' : p.situacao} | ${p.status.isEmpty ? '-' : p.status}',
-      '',
-      'Total: ${sorted.length} produto(s)',
-    ].join('\n');
+    final body = report.html;
+    final plainTextBody = report.plain;
     final subject =
         'Controle de Validades - Relatorio (${du.formatDate(today)})';
+
+    // Android: abre um seletor (chooser) de apps de e-mail. O corpo visivel usa
+    // o HTML "rich" (negrito + quebras), que o Gmail renderiza.
+    if (Platform.isAndroid) {
+      try {
+        final ok = await const MethodChannel('email_sender').invokeMethod<bool>(
+          'sendEmail',
+          {'subject': subject, 'htmlBody': body, 'richBody': report.rich},
+        );
+        if (ok == true) return;
+      } catch (_) {}
+    }
 
     try {
       final capabilities = await FlutterEmailSender.getCapabilities();

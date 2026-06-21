@@ -50,8 +50,8 @@ class EmailSenderPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Activi
             "sendEmail" -> {
                 val subject = call.argument<String>("subject") ?: ""
                 val htmlBody = call.argument<String>("htmlBody") ?: ""
-                val plainBody = call.argument<String>("plainBody") ?: ""
-                val sent = sendEmail(subject, htmlBody, plainBody)
+                val richBody = call.argument<String>("richBody") ?: htmlBody
+                val sent = sendEmail(subject, htmlBody, richBody)
                 result.success(sent)
             }
             else -> result.notImplemented()
@@ -59,14 +59,16 @@ class EmailSenderPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, Activi
     }
 
     @Suppress("DEPRECATION")
-    private fun sendEmail(subject: String, htmlBody: String, plainBody: String): Boolean {
+    private fun sendEmail(subject: String, htmlBody: String, richBody: String): Boolean {
         val intent = Intent(Intent.ACTION_SENDTO).apply {
             data = Uri.parse("mailto:")
             putExtra(Intent.EXTRA_SUBJECT, subject)
+            // O corpo visivel usa o HTML "rich" (negrito + <br>), que o Gmail
+            // renderiza. Tabelas HTML nao sao suportadas pelo Html.fromHtml.
             val spanned = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                Html.fromHtml(htmlBody, Html.FROM_HTML_MODE_LEGACY)
+                Html.fromHtml(richBody, Html.FROM_HTML_MODE_LEGACY)
             } else {
-                Html.fromHtml(htmlBody)
+                Html.fromHtml(richBody)
             }
             putExtra(Intent.EXTRA_TEXT, spanned)
             putExtra(Intent.EXTRA_HTML_TEXT, htmlBody)
