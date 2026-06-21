@@ -67,6 +67,8 @@ class RelatorioController extends ChangeNotifier {
 
   int get geralTotal => resumos.fold(0, (s, r) => s + r.totalGeral);
   int get geralVendidos => resumos.fold(0, (s, r) => s + r.vendidos);
+  int get geralPendentes => resumos.fold(0, (s, r) => s + r.pendentes);
+  int get geralBaixados => resumos.fold(0, (s, r) => s + r.baixados);
   int get geralVencidos =>
       resumos.fold(0, (s, r) => s + r.pendentes + r.baixados);
 

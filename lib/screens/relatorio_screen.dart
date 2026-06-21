@@ -189,6 +189,8 @@ class _RelatorioScreenState extends State<RelatorioScreen>
                 total: _c.geralTotal,
                 vendidos: _c.geralVendidos,
                 vencidos: _c.geralVencidos,
+                pendentes: _c.geralPendentes,
+                baixados: _c.geralBaixados,
                 onTap: _showItensGlobal,
               ),
               const SizedBox(height: 16),
@@ -267,12 +269,16 @@ class _GeralCard extends StatelessWidget {
   final int total;
   final int vendidos;
   final int vencidos;
+  final int pendentes;
+  final int baixados;
   final void Function(RelatorioCategoria) onTap;
 
   const _GeralCard({
     required this.total,
     required this.vendidos,
     required this.vencidos,
+    required this.pendentes,
+    required this.baixados,
     required this.onTap,
   });
 
@@ -376,6 +382,20 @@ class _GeralCard extends StatelessWidget {
                             label: 'Vencidos',
                             value: vencidos,
                             onTap: () => onTap(RelatorioCategoria.vencidos),
+                          ),
+                          _StatColumn(
+                            icon: Icons.access_time,
+                            color: AppColors.offline,
+                            label: 'Pendentes',
+                            value: pendentes,
+                            onTap: () => onTap(RelatorioCategoria.pendentes),
+                          ),
+                          _StatColumn(
+                            icon: Icons.arrow_downward,
+                            color: AppColors.danger,
+                            label: 'Baixados',
+                            value: baixados,
+                            onTap: () => onTap(RelatorioCategoria.baixados),
                           ),
                         ],
                       ),
