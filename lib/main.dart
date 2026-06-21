@@ -11,6 +11,7 @@ import 'screens/cadastro_screen.dart';
 import 'screens/importar_screen.dart';
 import 'screens/exportar_screen.dart';
 import 'screens/configuracao_screen.dart';
+import 'screens/relatorio_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -131,16 +132,19 @@ class _MainScreenState extends State<MainScreen> {
     super.dispose();
   }
 
-  // Indice do item selecionado na barra inferior (Importar/Exportar -> "Dados").
+  // Mapeia a tela atual para o item destacado na barra inferior.
   int get _selectedNavIndex {
     switch (_currentIndex) {
       case 0:
-      case 1:
-      case 2:
-        return _currentIndex;
+        return 0; // Produtos
+      case 1: // Locais
+      case 2: // Cadastro de produto
+        return 1; // Cadastro
       case 3: // Importar
       case 4: // Exportar
-        return 3; // Dados
+        return 2; // Dados
+      case 6: // Relatorio
+        return 3; // Relatorio
       default: // 5 Configuracao
         return 4;
     }
@@ -153,14 +157,13 @@ class _MainScreenState extends State<MainScreen> {
         _produtosScreenKey.currentState?.refresh();
         break;
       case 1:
-        setState(() => _currentIndex = 1);
+        _showCadastroMenu();
         break;
       case 2:
-        setState(() => _currentIndex = 2);
-        _cadastroScreenKey.currentState?.refresh();
+        _showDadosMenu();
         break;
       case 3:
-        _showDadosMenu();
+        setState(() => _currentIndex = 6);
         break;
       default: // Config
         setState(() => _currentIndex = 5);
@@ -168,20 +171,20 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  Future<void> _showDadosMenu() async {
+  Future<void> _showSubmenu(String title, List<_SubmenuItem> items) async {
     final selected = await showModalBottomSheet<int>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Dados',
-                  style: TextStyle(
+                  title,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryDark,
@@ -189,24 +192,31 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.upload_file, color: AppColors.primary),
-              title: const Text('Importacao'),
-              onTap: () => Navigator.pop(ctx, 3),
-            ),
-            ListTile(
-              leading: const Icon(Icons.ios_share, color: AppColors.primary),
-              title: const Text('Exportar'),
-              onTap: () => Navigator.pop(ctx, 4),
-            ),
+            for (final item in items)
+              ListTile(
+                leading: Icon(item.icon, color: AppColors.primary),
+                title: Text(item.label),
+                onTap: () => Navigator.pop(ctx, item.screenIndex),
+              ),
           ],
         ),
       ),
     );
     if (selected != null) {
       setState(() => _currentIndex = selected);
+      if (selected == 2) _cadastroScreenKey.currentState?.refresh();
     }
   }
+
+  Future<void> _showCadastroMenu() => _showSubmenu('Cadastro', const [
+    _SubmenuItem(Icons.inventory_2, 'Produtos', 2),
+    _SubmenuItem(Icons.location_on, 'Locais', 1),
+  ]);
+
+  Future<void> _showDadosMenu() => _showSubmenu('Dados', const [
+    _SubmenuItem(Icons.upload_file, 'Importacao', 3),
+    _SubmenuItem(Icons.ios_share, 'Exportar', 4),
+  ]);
 
   static const _titles = [
     'Produtos',
@@ -215,6 +225,7 @@ class _MainScreenState extends State<MainScreen> {
     'Importar Excel',
     'Exportar',
     'Configuracao',
+    'Relatorio',
   ];
 
   late final List<Widget> _screens = <Widget>[
@@ -224,6 +235,7 @@ class _MainScreenState extends State<MainScreen> {
     const ImportarScreen(),
     const ExportarScreen(),
     const ConfiguracaoScreen(),
+    const RelatorioScreen(),
   ];
 
   @override
@@ -273,12 +285,21 @@ class _MainScreenState extends State<MainScreen> {
         unselectedFontSize: 11,
         items: const [
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Produtos'),
-          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Locais'),
-          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Cadastrar'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Cadastro'),
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Dados'),
+          BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Relatório'),
           BottomNavigationBarItem(icon: SizedBox.shrink(), label: 'Config'),
         ],
       ),
     );
   }
+}
+
+/// Item de um submenu da barra inferior (Cadastro / Dados).
+class _SubmenuItem {
+  final IconData icon;
+  final String label;
+  final int screenIndex;
+
+  const _SubmenuItem(this.icon, this.label, this.screenIndex);
 }
