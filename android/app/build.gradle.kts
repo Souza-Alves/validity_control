@@ -36,6 +36,14 @@ gradle.projectsEvaluated {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // Ofusca e remove codigo nativo (Kotlin/Java) nao usado no release,
+            // dificultando a engenharia reversa.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
