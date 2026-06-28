@@ -130,6 +130,7 @@ class _TopVencidosScreenState extends State<TopVencidosScreen>
                             headerColor: AppColors.primary,
                             itens: _c.topVencidosLocal(r.nome),
                             vazio: 'Nenhum produto vencido',
+                            collapsible: true,
                           ),
                         ),
                     ],
@@ -173,7 +174,7 @@ class _MesHeader extends StatelessWidget {
   }
 }
 
-class _TopCard extends StatelessWidget {
+class _TopCard extends StatefulWidget {
   final String titulo;
   final String subtitulo;
   final IconData icon;
@@ -181,6 +182,7 @@ class _TopCard extends StatelessWidget {
   final List<Produto> itens;
   final bool showLocal;
   final String vazio;
+  final bool collapsible;
 
   const _TopCard({
     required this.titulo,
@@ -190,7 +192,20 @@ class _TopCard extends StatelessWidget {
     required this.itens,
     required this.vazio,
     this.showLocal = false,
+    this.collapsible = false,
   });
+
+  @override
+  State<_TopCard> createState() => _TopCardState();
+}
+
+class _TopCardState extends State<_TopCard> {
+  late bool _expanded = !widget.collapsible;
+
+  void _toggle() {
+    if (!widget.collapsible) return;
+    setState(() => _expanded = !_expanded);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -204,54 +219,72 @@ class _TopCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            color: headerColor,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            child: Row(
-              children: [
-                Icon(icon, color: AppColors.white, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    titulo,
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+          InkWell(
+            onTap: widget.collapsible ? _toggle : null,
+            child: Container(
+              color: widget.headerColor,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              child: Row(
+                children: [
+                  Icon(widget.icon, color: AppColors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.titulo,
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-                Text(
-                  subtitulo,
-                  style: const TextStyle(color: AppColors.white, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          if (itens.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Text(
-                vazio,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textMuted),
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-              child: Column(
-                children: [
-                  for (var i = 0; i < itens.length; i++)
-                    _RankRow(
-                      posicao: i + 1,
-                      produto: itens[i],
-                      showLocal: showLocal,
-                      divider: i < itens.length - 1,
+                  Text(
+                    widget.subtitulo,
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 11,
                     ),
+                  ),
+                  if (widget.collapsible) ...[
+                    const SizedBox(width: 6),
+                    Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                      color: AppColors.white,
+                      size: 22,
+                    ),
+                  ],
                 ],
               ),
             ),
+          ),
+          if (_expanded)
+            if (widget.itens.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  widget.vazio,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 6,
+                  horizontal: 10,
+                ),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < widget.itens.length; i++)
+                      _RankRow(
+                        posicao: i + 1,
+                        produto: widget.itens[i],
+                        showLocal: widget.showLocal,
+                        divider: i < widget.itens.length - 1,
+                      ),
+                  ],
+                ),
+              ),
         ],
       ),
     );

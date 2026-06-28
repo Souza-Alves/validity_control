@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+
 DateTime? parseDate(String dateStr) {
   final parts = dateStr.split('/');
   if (parts.length != 3) return null;
@@ -53,4 +55,20 @@ String applyDateMask(String text) {
     masked += digits[i];
   }
   return masked;
+}
+
+/// Aplica a mascara DD/MM/AAAA enquanto o usuario digita, mantendo o cursor
+/// no fim do texto formatado.
+class DateMaskFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final masked = applyDateMask(newValue.text);
+    return TextEditingValue(
+      text: masked,
+      selection: TextSelection.collapsed(offset: masked.length),
+    );
+  }
 }

@@ -153,10 +153,8 @@ class _ExportarScreenState extends State<ExportarScreen> {
                   ),
                   keyboardType: TextInputType.number,
                   maxLength: 10,
-                  onChanged: (v) {
-                    final masked = du.applyDateMask(v);
-                    editValidade = masked;
-                  },
+                  inputFormatters: [du.DateMaskFormatter()],
+                  onChanged: (v) => editValidade = v,
                 ),
                 const SizedBox(height: 12),
                 const Text(

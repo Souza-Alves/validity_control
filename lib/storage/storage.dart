@@ -344,7 +344,14 @@ Future<void> _doSync() async {
         .map((e) => _fromDbProduto(e as Map<String, dynamic>))
         .toList(),
   );
-  await _writeWorkbook(fresh);
+  // So reescreve e notifica a UI quando o servidor traz algo diferente do
+  // cache, evitando recarregamentos em loop a cada ciclo de sync.
+  final freshJson = jsonEncode(fresh.toJson());
+  final currentJson = jsonEncode((await _readWorkbook()).toJson());
+  if (freshJson != currentJson) {
+    await _writeWorkbook(fresh);
+    _notifyDataChanged();
+  }
 }
 
 Future<void> _ensureSynced({bool force = false}) {
@@ -371,7 +378,9 @@ Future<void> syncNow() => _ensureSynced(force: true);
 // =================== Locais ===================
 
 Future<List<Local>> getLocais() async {
-  await _ensureSynced();
+  // Offline-first: devolve o cache na hora e sincroniza em segundo plano. Ao
+  // terminar, _doSync notifica a UI se houver dados novos do servidor.
+  unawaited(_ensureSynced());
   final data = await _readWorkbook();
   return data.locais;
 }
@@ -423,7 +432,7 @@ Future<void> deleteLocal(String id) async {
 }
 
 Future<List<Local>> getLocaisAtivos() async {
-  await _ensureSynced();
+  unawaited(_ensureSynced());
   final data = await _readWorkbook();
   return data.locais.where((l) => l.ativo).toList();
 }
@@ -431,7 +440,7 @@ Future<List<Local>> getLocaisAtivos() async {
 // =================== Produtos ===================
 
 Future<List<Produto>> getProdutos() async {
-  await _ensureSynced();
+  unawaited(_ensureSynced());
   final data = await _readWorkbook();
   return data.produtos;
 }

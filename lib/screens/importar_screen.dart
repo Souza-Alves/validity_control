@@ -136,59 +136,67 @@ class _ImportarScreenState extends State<ImportarScreen>
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Pre-visualizacao (${_c.rows.length} itens)',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (!_c.imported)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: _c.loading ? null : _handleImport,
-                    child: Text(
-                      _c.loading ? 'Importando...' : 'Confirmar Importacao',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                if (_c.imported)
-                  Row(
-                    children: [
-                      const Text(
-                        'Importado com sucesso!',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Pre-visualizacao (${_c.rows.length} itens)',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                    ),
+                    if (!_c.imported)
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                         ),
-                        onPressed: _c.reset,
-                        child: const Text(
-                          'Nova Importacao',
-                          style: TextStyle(
+                        onPressed: _c.loading ? null : _handleImport,
+                        child: Text(
+                          _c.loading ? 'Importando...' : 'Confirmar Importacao',
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontSize: 13,
                           ),
                         ),
                       ),
-                    ],
+                  ],
+                ),
+                if (_c.imported) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Importado com sucesso!',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: _c.reset,
+                      child: const Text(
+                        'Nova Importacao',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
