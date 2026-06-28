@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/produto.dart';
 import '../storage/storage.dart' as storage;
+import '../utils/date_utils.dart' as du;
 
 /// Categorias de contagem exibidas no relatorio.
 enum RelatorioCategoria { total, vendidos, pendentes, baixados, vencidos }
@@ -90,6 +91,26 @@ class RelatorioController extends ChangeNotifier {
   List<Produto> topVencidosGlobal({int limit = 10}) {
     final lista = produtos.where(_isVencido).toList()..sort(_porQuantidade);
     return lista.take(limit).toList();
+  }
+
+  /// Mes de referencia do relatorio: o mes (1-12) mais frequente entre as
+  /// validades dos produtos importados. Retorna null se nao houver datas.
+  int? mesReferencia() {
+    final contagem = <int, int>{};
+    for (final p in produtos) {
+      final d = du.parseDate(p.validade);
+      if (d != null) contagem[d.month] = (contagem[d.month] ?? 0) + 1;
+    }
+    if (contagem.isEmpty) return null;
+    var melhorMes = contagem.keys.first;
+    var melhorCount = -1;
+    contagem.forEach((mes, c) {
+      if (c > melhorCount) {
+        melhorCount = c;
+        melhorMes = mes;
+      }
+    });
+    return melhorMes;
   }
 
   int get geralTotal => resumos.fold(0, (s, r) => s + r.totalGeral);

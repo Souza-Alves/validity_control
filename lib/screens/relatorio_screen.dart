@@ -160,7 +160,8 @@ class _RelatorioScreenState extends State<RelatorioScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final mesAtual = _meses[DateTime.now().month - 1];
+    final mesRef = _c.mesReferencia() ?? DateTime.now().month;
+    final mesAtual = _meses[mesRef - 1];
 
     if (_c.loading) {
       return const LoadingIndicator();
