@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../models/local.dart';
 import '../models/produto.dart';
 import '../storage/storage.dart' as storage;
 import '../utils/date_utils.dart' as du;
@@ -23,11 +24,83 @@ class LocalResumo {
   });
 }
 
+/// Período (mês/ano) usado para filtrar o relatório pela validade dos produtos.
+class Periodo {
+  final int ano;
+  final int mes; // 1-12
+  const Periodo(this.ano, this.mes);
+
+  @override
+  bool operator ==(Object other) =>
+      other is Periodo && other.ano == ano && other.mes == mes;
+
+  @override
+  int get hashCode => Object.hash(ano, mes);
+
+  static const _nomesMeses = [
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
+  ];
+
+  String get nomeMes => _nomesMeses[mes - 1];
+  String get label => '$nomeMes/$ano';
+}
+
 /// Controller da tela de Relatorio: agrega os produtos por local.
 class RelatorioController extends ChangeNotifier {
   List<LocalResumo> resumos = [];
-  List<Produto> produtos = [];
+
+  // Todos os produtos carregados; `produtos` expõe apenas o período selecionado.
+  List<Produto> _allProdutos = [];
+  Periodo? _periodo;
   bool loading = true;
+
+  Periodo? get periodo => _periodo;
+
+  /// Produtos filtrados pelo período (mês/ano) selecionado. Se não houver
+  /// período, retorna todos.
+  List<Produto> get produtos {
+    if (_periodo == null) return _allProdutos;
+    return _allProdutos.where((p) => _noPeriodo(p, _periodo!)).toList();
+  }
+
+  static bool _noPeriodo(Produto p, Periodo periodo) {
+    final d = du.parseDate(p.validade);
+    if (d == null) return false;
+    return d.year == periodo.ano && d.month == periodo.mes;
+  }
+
+  /// Períodos (mês/ano) disponíveis nos dados, mais recentes primeiro.
+  List<Periodo> get periodosDisponiveis {
+    final set = <Periodo>{};
+    for (final p in _allProdutos) {
+      final d = du.parseDate(p.validade);
+      if (d != null) set.add(Periodo(d.year, d.month));
+    }
+    final lista = set.toList()
+      ..sort((a, b) {
+        final y = b.ano.compareTo(a.ano);
+        return y != 0 ? y : b.mes.compareTo(a.mes);
+      });
+    return lista;
+  }
+
+  /// Altera o período exibido e recomputa os resumos.
+  void setPeriodo(Periodo? periodo) {
+    _periodo = periodo;
+    _recompute();
+    notifyListeners();
+  }
 
   /// Lista os produtos de um local que pertencem a uma categoria do relatorio.
   List<Produto> itens(String localNome, RelatorioCategoria categoria) {
@@ -93,26 +166,6 @@ class RelatorioController extends ChangeNotifier {
     return lista.take(limit).toList();
   }
 
-  /// Mes de referencia do relatorio: o mes (1-12) mais frequente entre as
-  /// validades dos produtos importados. Retorna null se nao houver datas.
-  int? mesReferencia() {
-    final contagem = <int, int>{};
-    for (final p in produtos) {
-      final d = du.parseDate(p.validade);
-      if (d != null) contagem[d.month] = (contagem[d.month] ?? 0) + 1;
-    }
-    if (contagem.isEmpty) return null;
-    var melhorMes = contagem.keys.first;
-    var melhorCount = -1;
-    contagem.forEach((mes, c) {
-      if (c > melhorCount) {
-        melhorCount = c;
-        melhorMes = mes;
-      }
-    });
-    return melhorMes;
-  }
-
   int get geralTotal => resumos.fold(0, (s, r) => s + r.totalGeral);
   int get geralVendidos => resumos.fold(0, (s, r) => s + r.vendidos);
   int get geralPendentes => resumos.fold(0, (s, r) => s + r.pendentes);
@@ -132,18 +185,31 @@ class RelatorioController extends ChangeNotifier {
     super.dispose();
   }
 
+  List<Local> _locais = [];
+
   Future<void> load() async {
     if (resumos.isEmpty) {
       loading = true;
       notifyListeners();
     }
 
-    final prods = await storage.getProdutos();
-    final locais = await storage.getLocais();
-    produtos = prods;
+    _allProdutos = await storage.getProdutos();
+    _locais = await storage.getLocais();
 
+    // Se o período atual não existe mais nos dados, cai no mais recente.
+    final disponiveis = periodosDisponiveis;
+    if (_periodo == null || !disponiveis.contains(_periodo)) {
+      _periodo = disponiveis.isNotEmpty ? disponiveis.first : null;
+    }
+
+    _recompute();
+    loading = false;
+    notifyListeners();
+  }
+
+  void _recompute() {
     final mapa = <String, _Agg>{};
-    for (final p in prods) {
+    for (final p in produtos) {
       final agg = mapa.putIfAbsent(p.localNome, () => _Agg());
       agg.totalGeral += p.quantidade;
       if (p.situacao == 'Vendido') agg.vendidos += p.quantidade;
@@ -154,7 +220,7 @@ class RelatorioController extends ChangeNotifier {
     // Ordena seguindo a ordem dos locais cadastrados; o que sobrar vai depois.
     final ordenados = <LocalResumo>[];
     final usados = <String>{};
-    for (final l in locais) {
+    for (final l in _locais) {
       final agg = mapa[l.nome];
       if (agg != null) {
         ordenados.add(agg.toResumo(l.nome));
@@ -168,8 +234,33 @@ class RelatorioController extends ChangeNotifier {
     }
 
     resumos = ordenados;
-    loading = false;
-    notifyListeners();
+  }
+
+  // ============ Relatório comparativo de vencidos ============
+
+  /// Qtd de vencidos (Pendente/Baixado) de um local em um período específico.
+  int vencidosNoPeriodo(String localNome, Periodo periodo) {
+    return _allProdutos
+        .where(
+          (p) =>
+              p.localNome == localNome &&
+              _isVencido(p) &&
+              _noPeriodo(p, periodo),
+        )
+        .fold(0, (s, p) => s + p.quantidade);
+  }
+
+  /// Locais (nomes) que têm ao menos um produto em qualquer período, ordenados
+  /// seguindo o cadastro de locais.
+  List<String> get nomesLocais {
+    final comProdutos = _allProdutos.map((p) => p.localNome).toSet();
+    final ordenados = <String>[];
+    for (final l in _locais) {
+      if (comProdutos.contains(l.nome)) ordenados.add(l.nome);
+    }
+    final restantes = comProdutos.where((n) => !ordenados.contains(n)).toList()
+      ..sort();
+    return [...ordenados, ...restantes];
   }
 }
 

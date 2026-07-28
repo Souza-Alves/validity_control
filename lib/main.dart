@@ -13,6 +13,7 @@ import 'screens/exportar_screen.dart';
 import 'screens/configuracao_screen.dart';
 import 'screens/relatorio_screen.dart';
 import 'screens/top_vencidos_screen.dart';
+import 'screens/comparativo_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -146,6 +147,7 @@ class _MainScreenState extends State<MainScreen> {
         return 2; // Dados
       case 6: // Relatorio Geral
       case 7: // Top Vencidos
+      case 8: // Comparativo de Vencidos
         return 3; // Relatorios
       default: // 5 Configuracao
         return 4;
@@ -223,6 +225,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _showRelatoriosMenu() => _showSubmenu('Relatorios', const [
     _SubmenuItem(Icons.assessment, 'Geral', 6),
     _SubmenuItem(Icons.emoji_events, 'Top Vencidos', 7),
+    _SubmenuItem(Icons.compare_arrows, 'Comparativo', 8),
   ]);
 
   static const _titles = [
@@ -234,6 +237,7 @@ class _MainScreenState extends State<MainScreen> {
     'Configuracao',
     'Relatorio',
     'Top Vencidos',
+    'Comparativo',
   ];
 
   late final List<Widget> _screens = <Widget>[
@@ -245,6 +249,7 @@ class _MainScreenState extends State<MainScreen> {
     const ConfiguracaoScreen(),
     const RelatorioScreen(),
     const TopVencidosScreen(),
+    const ComparativoScreen(),
   ];
 
   @override

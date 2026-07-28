@@ -133,8 +133,15 @@ class ImportarController extends ChangeNotifier {
     return null;
   }
 
-  /// Grava os itens importados em lote. Retorna a quantidade de produtos
-  /// importados, ou `-1` se não houver dados.
+  // Chave de deduplicação: mesmo Local + Nome + Validade (dia/mês/ano completos).
+  // Produtos do mesmo local/nome mas com datas diferentes ficam separados.
+  static String _dedupKey(String localNome, String nome, String validade) =>
+      '${localNome.toLowerCase().trim()}|${nome.toLowerCase().trim()}|${validade.trim()}';
+
+  /// Grava os itens importados em lote, **sem apagar** os dados existentes.
+  /// Se um produto já existe (mesmo Local + Nome + Validade), **soma** a
+  /// quantidade em vez de duplicar. Retorna a quantidade de itens processados
+  /// da planilha, ou `-1` se não houver dados.
   Future<int> import() async {
     if (rows.isEmpty) return -1;
 
@@ -142,10 +149,20 @@ class ImportarController extends ChangeNotifier {
     notifyListeners();
 
     final existingLocais = await storage.getLocais();
+    final existingProdutos = await storage.getProdutos();
+
     final localMap = <String, Local>{
       for (final l in existingLocais) l.nome.toLowerCase(): l,
     };
     final newLocais = <Local>[];
+
+    // Índice dos produtos já existentes por chave de dedup.
+    final existingIds = {for (final p in existingProdutos) p.id};
+    final byKey = <String, Produto>{
+      for (final p in existingProdutos)
+        _dedupKey(p.localNome, p.nome, p.validade): p,
+    };
+    final atualizados = <String, Produto>{}; // id -> produto existente somado
     final newProdutos = <Produto>[];
 
     for (final row in rows) {
@@ -155,23 +172,36 @@ class ImportarController extends ChangeNotifier {
         newLocais.add(local);
         localMap[row.predio.toLowerCase()] = local;
       }
-      newProdutos.add(
-        Produto(
+      final key = _dedupKey(local.nome, row.produto, row.vencimento);
+      final match = byKey[key];
+      if (match != null) {
+        match.quantidade += row.quantidade;
+        if (existingIds.contains(match.id)) atualizados[match.id] = match;
+        // Se o match for um item novo desta importação, já está em newProdutos
+        // e a soma acima o atualiza in-place.
+      } else {
+        final novo = Produto(
           id: generateId(),
           localId: local.id,
           localNome: local.nome,
           quantidade: row.quantidade,
           nome: row.produto,
           validade: row.vencimento,
-        ),
-      );
+        );
+        byKey[key] = novo;
+        newProdutos.add(novo);
+      }
     }
 
-    await storage.importBatch(newLocais, newProdutos);
+    await storage.importBatch(
+      novosLocais: newLocais,
+      produtosAtualizados: atualizados.values.toList(),
+      novosProdutos: newProdutos,
+    );
     imported = true;
     loading = false;
     notifyListeners();
-    return newProdutos.length;
+    return rows.length;
   }
 
   void reset() {

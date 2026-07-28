@@ -4,6 +4,7 @@ import '../models/produto.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_utils.dart' as du;
 import '../widgets/loading_indicator.dart';
+import '../widgets/periodo_selector.dart';
 
 class RelatorioScreen extends StatefulWidget {
   const RelatorioScreen({super.key});
@@ -160,8 +161,7 @@ class _RelatorioScreenState extends State<RelatorioScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final mesRef = _c.mesReferencia() ?? DateTime.now().month;
-    final mesAtual = _meses[mesRef - 1];
+    final mesAtual = _meses[(_c.periodo?.mes ?? DateTime.now().month) - 1];
 
     if (_c.loading) {
       return const LoadingIndicator();
@@ -186,7 +186,13 @@ class _RelatorioScreenState extends State<RelatorioScreen>
               ),
             ),
             const SizedBox(height: 8),
-            _MesHeader(mes: mesAtual),
+            PeriodoSelector(
+              periodos: _c.periodosDisponiveis,
+              selecionado: _c.periodo,
+              onChanged: _c.setPeriodo,
+            ),
+            const SizedBox(height: 8),
+            _MesHeader(mes: mesAtual, ano: _c.periodo?.ano),
             const SizedBox(height: 16),
             if (!_c.loading && _c.resumos.isNotEmpty) ...[
               _GeralCard(
@@ -240,7 +246,8 @@ class _RelatorioScreenState extends State<RelatorioScreen>
 
 class _MesHeader extends StatelessWidget {
   final String mes;
-  const _MesHeader({required this.mes});
+  final int? ano;
+  const _MesHeader({required this.mes, this.ano});
 
   @override
   Widget build(BuildContext context) {
@@ -251,12 +258,17 @@ class _MesHeader extends StatelessWidget {
         const SizedBox(width: 8),
         const Icon(Icons.calendar_month, color: AppColors.primary, size: 28),
         const SizedBox(width: 8),
-        Text(
-          mes,
-          style: const TextStyle(
-            fontSize: 34,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              ano != null ? '$mes/$ano' : mes,
+              style: const TextStyle(
+                fontSize: 34,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 8),
