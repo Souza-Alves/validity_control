@@ -33,8 +33,10 @@ class ExportarController extends BaseProdutoController {
         if (d != null && start != null && end != null) {
           if (d.isBefore(start) || d.isAfter(end)) return false;
         }
+        return true;
       }
-      return true;
+      // Sem filtro de período: mostra apenas o mês corrente (data do device).
+      return isMesCorrente(p);
     }).toList();
   }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'supabase/supabase_client.dart';
+import 'storage/storage.dart' show kDevMode;
 import 'theme/app_colors.dart';
 import 'theme/app_text_styles.dart';
 import 'theme/app_theme.dart';
@@ -272,6 +273,28 @@ class _MainScreenState extends State<MainScreen> {
       ),
       body: Column(
         children: [
+          if (kDevMode)
+            Container(
+              width: double.infinity,
+              color: Colors.deepOrange,
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.build, color: Colors.white, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'MODO DESENVOLVEDOR',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (_offline)
             Container(
               width: double.infinity,

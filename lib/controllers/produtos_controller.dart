@@ -24,7 +24,8 @@ class ProdutosController extends BaseProdutoController {
       if (days != null && days >= 0) {
         return du.isWithinDays(p.validade, days);
       }
-      return true;
+      // Sem filtro de data/dias: mostra apenas o mês corrente (data do device).
+      return isMesCorrente(p);
     }).toList();
   }
 

@@ -54,6 +54,14 @@ abstract class BaseProdutoController extends ChangeNotifier {
     return false;
   }
 
+  /// Verdadeiro se a validade do produto cai no mês/ano atual do device.
+  bool isMesCorrente(Produto p) {
+    final d = du.parseDate(p.validade);
+    if (d == null) return false;
+    final now = DateTime.now();
+    return d.year == now.year && d.month == now.month;
+  }
+
   bool matchesLocalFilter(Produto p) {
     if (filtrosLocal.isEmpty) return true;
     return filtrosLocal.any(
