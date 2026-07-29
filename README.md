@@ -105,11 +105,41 @@ flutter run            # device/emulador
 flutter run -d chrome  # web
 ```
 
-### Build
+### Build do APK
+
+O app tem dois modos de compilação, controlados pela flag `--dart-define=DEV_MODE`:
+
+- **Produção** (padrão): usa as tabelas `tb_location` / `tb_products` do Supabase e o
+  cache local padrão. Nome do app: **Controle de Validades**
+  (`com.controlevalidades.controle_validades`).
+- **Desenvolvimento** (`DEV_MODE=true`): usa as tabelas `tb_location_dev` /
+  `tb_products_dev` e um cache local separado, sem afetar os dados de produção. Mostra
+  um banner **MODO DESENVOLVEDOR** e instala como um app distinto — nome **Validades DEV**
+  (`com.controlevalidades.controle_validades.dev`) — permitindo ter os dois apps no
+  mesmo device.
+
+**APK de PRODUÇÃO** (com ofuscação do Dart + R8/ProGuard):
 
 ```bash
-flutter build apk --release   # Android
-flutter build web --release   # Web
+flutter build apk --release --obfuscate --split-debug-info=build/debug-info
+```
+Saída: `build/app/outputs/flutter-apk/app-release.apk`.
+(Guarde a pasta `build/debug-info/` para conseguir ler stack traces de produção depois.)
+
+**APK de DESENVOLVIMENTO**:
+
+```bash
+flutter build apk --release --dart-define=DEV_MODE=true
+```
+Para rodar direto no device/emulador em modo dev:
+```bash
+flutter run --dart-define=DEV_MODE=true
+```
+
+**Web**:
+
+```bash
+flutter build web --release
 ```
 
 ### Qualidade
