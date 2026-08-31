@@ -2,7 +2,6 @@ import java.util.Base64
 
 plugins {
     id("com.android.application")
-    id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -29,6 +28,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
 gradle.projectsEvaluated {
@@ -73,15 +76,10 @@ gradle.projectsEvaluated {
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-    }
-}
-
 flutter {
     source = "../.."
 }
+
 gradle.projectsEvaluated {
     tasks.withType<JavaCompile> {
         options.compilerArgs.addAll(listOf("-Xlint:none", "-nowarn"))
