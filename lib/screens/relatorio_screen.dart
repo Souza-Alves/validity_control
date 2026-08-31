@@ -280,7 +280,7 @@ class _MesHeader extends StatelessWidget {
   }
 }
 
-class _GeralCard extends StatelessWidget {
+class _GeralCard extends StatefulWidget {
   final int total;
   final int vendidos;
   final int pendentes;
@@ -296,131 +296,13 @@ class _GeralCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.divider),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            color: AppColors.primaryDark,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            child: const Row(
-              children: [
-                Icon(Icons.summarize, color: AppColors.white, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Geral (todos os locais)',
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Total Geral\nde Produtos',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      InkWell(
-                        onTap: () => onTap(RelatorioCategoria.total),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Text(
-                            '$total',
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textHeading,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 96,
-                  color: AppColors.divider,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                Expanded(
-                  flex: 6,
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Total de Produtos',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _StatColumn(
-                            icon: Icons.shopping_cart,
-                            color: AppColors.primary,
-                            label: 'Vendidos',
-                            value: vendidos,
-                            onTap: () => onTap(RelatorioCategoria.vendidos),
-                          ),
-                          _StatColumn(
-                            icon: Icons.access_time,
-                            color: AppColors.offline,
-                            label: 'Pendentes',
-                            value: pendentes,
-                            onTap: () => onTap(RelatorioCategoria.pendentes),
-                          ),
-                          _StatColumn(
-                            icon: Icons.arrow_downward,
-                            color: AppColors.danger,
-                            label: 'Baixados',
-                            value: baixados,
-                            onTap: () => onTap(RelatorioCategoria.baixados),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<_GeralCard> createState() => _GeralCardState();
 }
 
-class _LocalCard extends StatelessWidget {
-  final LocalResumo resumo;
-  final void Function(RelatorioCategoria) onTap;
-  const _LocalCard({required this.resumo, required this.onTap});
+class _GeralCardState extends State<_GeralCard> {
+  bool _expanded = false;
+
+  void _toggle() => setState(() => _expanded = !_expanded);
 
   @override
   Widget build(BuildContext context) {
@@ -434,112 +316,276 @@ class _LocalCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            color: AppColors.primary,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            child: Row(
-              children: [
-                const Icon(Icons.location_on, color: AppColors.white, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    resumo.nome,
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+          InkWell(
+            onTap: _toggle,
+            child: Container(
+              color: AppColors.primaryDark,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.summarize, color: AppColors.white, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Geral (todos os locais)',
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    color: AppColors.white,
+                    size: 22,
+                  ),
+                ],
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Total Geral\nde Produtos',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Total Geral\nde Produtos',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      InkWell(
-                        onTap: () => onTap(RelatorioCategoria.total),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Text(
-                            '${resumo.totalGeral}',
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textHeading,
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: () =>
+                              widget.onTap(RelatorioCategoria.total),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text(
+                              '${widget.total}',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textHeading,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Container(
-                  width: 1,
-                  height: 96,
-                  color: AppColors.divider,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                Expanded(
-                  flex: 6,
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Total de Produtos',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textSecondary,
+                  Container(
+                    width: 1,
+                    height: 96,
+                    color: AppColors.divider,
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Total de Produtos',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _StatColumn(
-                            icon: Icons.shopping_cart,
-                            color: AppColors.primary,
-                            label: 'Vendidos',
-                            value: resumo.vendidos,
-                            onTap: () => onTap(RelatorioCategoria.vendidos),
-                          ),
-                          _StatColumn(
-                            icon: Icons.access_time,
-                            color: AppColors.offline,
-                            label: 'Pendentes',
-                            value: resumo.pendentes,
-                            onTap: () => onTap(RelatorioCategoria.pendentes),
-                          ),
-                          _StatColumn(
-                            icon: Icons.arrow_downward,
-                            color: AppColors.danger,
-                            label: 'Baixados',
-                            value: resumo.baixados,
-                            onTap: () => onTap(RelatorioCategoria.baixados),
-                          ),
-                        ],
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _StatColumn(
+                              icon: Icons.shopping_cart,
+                              color: AppColors.primary,
+                              label: 'Vendidos',
+                              value: widget.vendidos,
+                              onTap: () =>
+                                  widget.onTap(RelatorioCategoria.vendidos),
+                            ),
+                            _StatColumn(
+                              icon: Icons.access_time,
+                              color: AppColors.offline,
+                              label: 'Pendentes',
+                              value: widget.pendentes,
+                              onTap: () =>
+                                  widget.onTap(RelatorioCategoria.pendentes),
+                            ),
+                            _StatColumn(
+                              icon: Icons.arrow_downward,
+                              color: AppColors.danger,
+                              label: 'Baixados',
+                              value: widget.baixados,
+                              onTap: () =>
+                                  widget.onTap(RelatorioCategoria.baixados),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocalCard extends StatefulWidget {
+  final LocalResumo resumo;
+  final void Function(RelatorioCategoria) onTap;
+  const _LocalCard({required this.resumo, required this.onTap});
+
+  @override
+  State<_LocalCard> createState() => _LocalCardState();
+}
+
+class _LocalCardState extends State<_LocalCard> {
+  bool _expanded = false;
+
+  void _toggle() => setState(() => _expanded = !_expanded);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.divider),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: _toggle,
+            child: Container(
+              color: AppColors.primary,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on, color: AppColors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.resumo.nome,
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    color: AppColors.white,
+                    size: 22,
+                  ),
+                ],
+              ),
             ),
           ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Total Geral\nde Produtos',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: () =>
+                              widget.onTap(RelatorioCategoria.total),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text(
+                              '${widget.resumo.totalGeral}',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textHeading,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 96,
+                    color: AppColors.divider,
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Total de Produtos',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _StatColumn(
+                              icon: Icons.shopping_cart,
+                              color: AppColors.primary,
+                              label: 'Vendidos',
+                              value: widget.resumo.vendidos,
+                              onTap: () =>
+                                  widget.onTap(RelatorioCategoria.vendidos),
+                            ),
+                            _StatColumn(
+                              icon: Icons.access_time,
+                              color: AppColors.offline,
+                              label: 'Pendentes',
+                              value: widget.resumo.pendentes,
+                              onTap: () =>
+                                  widget.onTap(RelatorioCategoria.pendentes),
+                            ),
+                            _StatColumn(
+                              icon: Icons.arrow_downward,
+                              color: AppColors.danger,
+                              label: 'Baixados',
+                              value: widget.resumo.baixados,
+                              onTap: () =>
+                                  widget.onTap(RelatorioCategoria.baixados),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

@@ -103,6 +103,7 @@ class _TopVencidosScreenState extends State<TopVencidosScreen>
                 itens: topGlobal,
                 showLocal: true,
                 vazio: 'Nenhum produto vencido',
+                collapsible: true,
               ),
               const SizedBox(height: 16),
             ],

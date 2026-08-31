@@ -12,6 +12,7 @@ import '../utils/date_utils.dart' as du;
 import '../utils/email_report.dart';
 import '../theme/app_colors.dart';
 import '../controllers/produtos_controller.dart';
+import '../widgets/date_picker_field.dart';
 import '../widgets/loading_indicator.dart';
 import '../widgets/table_header_cell.dart';
 
@@ -136,7 +137,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                   ),
                 ),
                 const SizedBox(height: 4),
-                TextFormField(
+                DatePickerField(
                   initialValue: editValidade,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
@@ -146,9 +147,6 @@ class ProdutosScreenState extends State<ProdutosScreen>
                       vertical: 8,
                     ),
                   ),
-                  keyboardType: TextInputType.number,
-                  maxLength: 10,
-                  inputFormatters: [du.DateMaskFormatter()],
                   onChanged: (v) => editValidade = v,
                 ),
                 const SizedBox(height: 12),
@@ -615,71 +613,34 @@ class ProdutosScreenState extends State<ProdutosScreen>
               padding: const EdgeInsets.all(12),
               child: Column(
                 children: [
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Local:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            GestureDetector(
-                              onTap: () => _showLocalFilterSheet(),
-                              child: Container(
-                                width: double.infinity,
-                                height: 34,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: AppColors.border),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  localLabel,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                          ],
+                      const Text(
+                        'Local:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Dias:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            SizedBox(
-                              height: 34,
-                              child: TextField(
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  hintText: '4',
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 6,
-                                  ),
-                                ),
-                                onChanged: (v) => _c.setDias(v),
-                              ),
-                            ),
-                          ],
+                      const SizedBox(height: 2),
+                      GestureDetector(
+                        onTap: () => _showLocalFilterSheet(),
+                        child: Container(
+                          width: double.infinity,
+                          height: 34,
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            localLabel,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ],
@@ -701,30 +662,18 @@ class ProdutosScreenState extends State<ProdutosScreen>
                             const SizedBox(height: 2),
                             SizedBox(
                               height: 34,
-                              child: TextField(
+                              child: DatePickerField(
                                 controller: _dataInicialCtrl,
-                                keyboardType: TextInputType.number,
-                                maxLength: 10,
+                                height: 34,
                                 decoration: const InputDecoration(
                                   border: OutlineInputBorder(),
                                   hintText: 'DD/MM/AAAA',
-                                  counterText: '',
                                   contentPadding: EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 6,
                                   ),
                                 ),
-                                onChanged: (v) {
-                                  final masked = du.applyDateMask(v);
-                                  if (masked != v) {
-                                    _dataInicialCtrl.text = masked;
-                                    _dataInicialCtrl.selection =
-                                        TextSelection.fromPosition(
-                                          TextPosition(offset: masked.length),
-                                        );
-                                  }
-                                  _c.setDataInicial(masked);
-                                },
+                                onChanged: (v) => _c.setDataInicial(v),
                               ),
                             ),
                           ],
@@ -745,30 +694,18 @@ class ProdutosScreenState extends State<ProdutosScreen>
                             const SizedBox(height: 2),
                             SizedBox(
                               height: 34,
-                              child: TextField(
+                              child: DatePickerField(
                                 controller: _dataFinalCtrl,
-                                keyboardType: TextInputType.number,
-                                maxLength: 10,
+                                height: 34,
                                 decoration: const InputDecoration(
                                   border: OutlineInputBorder(),
                                   hintText: 'DD/MM/AAAA',
-                                  counterText: '',
                                   contentPadding: EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 6,
                                   ),
                                 ),
-                                onChanged: (v) {
-                                  final masked = du.applyDateMask(v);
-                                  if (masked != v) {
-                                    _dataFinalCtrl.text = masked;
-                                    _dataFinalCtrl.selection =
-                                        TextSelection.fromPosition(
-                                          TextPosition(offset: masked.length),
-                                        );
-                                  }
-                                  _c.setDataFinal(masked);
-                                },
+                                onChanged: (v) => _c.setDataFinal(v),
                               ),
                             ),
                           ],
@@ -843,63 +780,124 @@ class ProdutosScreenState extends State<ProdutosScreen>
                                 itemCount: sorted.length,
                                 itemBuilder: (_, i) {
                                   final item = sorted[i];
-                                  return InkWell(
-                                    onTap: () => _openEditModal(item),
-                                    child: Container(
-                                      decoration: const BoxDecoration(
-                                        border: Border(
-                                          bottom: BorderSide(
-                                            color: AppColors.divider,
+                                  return Dismissible(
+                                    key: ValueKey(item.id),
+                                    direction: DismissDirection.horizontal,
+                                    confirmDismiss: (direction) async {
+                                      final ctx = context;
+                                      if (direction ==
+                                          DismissDirection.startToEnd) {
+                                        await _c.updateProduto(
+                                          item.copyWith(situacao: 'Vendido'),
+                                        );
+                                        if (mounted) {
+                                          // ignore: use_build_context_synchronously
+                                          ScaffoldMessenger.of(ctx).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${item.nome} marcado como Vendido',
+                                              ),
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        await _c.updateProduto(
+                                          item.copyWith(
+                                            situacao: 'Vencido',
+                                            status: 'Pendente',
+                                          ),
+                                        );
+                                        if (mounted) {
+                                          // ignore: use_build_context_synchronously
+                                          ScaffoldMessenger.of(ctx).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${item.nome} marcado como Vencido - Pendente',
+                                              ),
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                      return true;
+                                    },
+                                    background: Container(
+                                      color: AppColors.primary,
+                                      alignment: Alignment.centerLeft,
+                                      padding: const EdgeInsets.only(left: 16),
+                                      child: const Icon(
+                                        Icons.check_circle,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    secondaryBackground: Container(
+                                      color: AppColors.danger,
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: const Icon(
+                                        Icons.warning,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    child: InkWell(
+                                      onTap: () => _openEditModal(item),
+                                      child: Container(
+                                        decoration: const BoxDecoration(
+                                          border: Border(
+                                            bottom: BorderSide(
+                                              color: AppColors.divider,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8,
-                                        horizontal: 8,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              item.localNome,
-                                              style: const TextStyle(
-                                                fontSize: 11,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                          horizontal: 8,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 3,
+                                              child: Text(
+                                                item.localNome,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          Expanded(
-                                            flex: 1,
-                                            child: Text(
-                                              '${item.quantidade}',
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                fontSize: 11,
+                                            Expanded(
+                                              flex: 1,
+                                              child: Text(
+                                                '${item.quantidade}',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          Expanded(
-                                            flex: 4,
-                                            child: Text(
-                                              item.nome,
-                                              style: const TextStyle(
-                                                fontSize: 11,
+                                            Expanded(
+                                              flex: 4,
+                                              child: Text(
+                                                item.nome,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              du.formatShort(item.validade),
-                                              textAlign: TextAlign.right,
-                                              style: const TextStyle(
-                                                fontSize: 11,
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                du.formatShort(item.validade),
+                                                textAlign: TextAlign.right,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   );
@@ -1019,7 +1017,15 @@ class ProdutosScreenState extends State<ProdutosScreen>
                           setSheetState(() {});
                         },
                       ),
-                      ..._c.locais.where((l) => l.ativo).map((l) {
+                      ..._c.locais.where((l) {
+                        if (!l.ativo) return false;
+                        return _c.produtos.any(
+                          (p) =>
+                              p.localId == l.id ||
+                              p.localNome.toLowerCase() ==
+                                  l.nome.toLowerCase(),
+                        );
+                      }).map((l) {
                         final sel = _c.filtrosLocal.contains(l.nome);
                         return ListTile(
                           leading: Checkbox(

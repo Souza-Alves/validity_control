@@ -29,7 +29,7 @@ class _ConfiguracaoScreenState extends State<ConfiguracaoScreen> {
   ];
 
   List<({int ano, int mes})> _periodos = [];
-  ({int ano, int mes})? _selecionado;
+  final Set<({int ano, int mes})> _selecionados = {};
 
   @override
   void initState() {
@@ -49,14 +49,84 @@ class _ConfiguracaoScreenState extends State<ConfiguracaoScreen> {
     if (!mounted) return;
     setState(() {
       _periodos = periodos;
-      if (_selecionado == null || !periodos.contains(_selecionado)) {
-        _selecionado = periodos.isNotEmpty ? periodos.first : null;
+      _selecionados.removeWhere((p) => !periodos.contains(p));
+      if (_selecionados.isEmpty && periodos.isNotEmpty) {
+        _selecionados.add(periodos.first);
       }
     });
   }
 
   String _labelPeriodo(({int ano, int mes}) p) =>
       '${_nomesMeses[p.mes - 1]}/${p.ano}';
+
+  void _togglePeriodo(({int ano, int mes}) p) {
+    setState(() {
+      if (_selecionados.contains(p)) {
+        _selecionados.remove(p);
+      } else {
+        _selecionados.add(p);
+      }
+    });
+  }
+
+  String get _selecionadosLabel {
+    if (_selecionados.isEmpty) return 'Selecione';
+    if (_selecionados.length == 1) {
+      return _labelPeriodo(_selecionados.first);
+    }
+    if (_selecionados.length == _periodos.length) return 'Todos';
+    return '${_selecionados.length} selecionados';
+  }
+
+  Future<void> _showPeriodoSelector() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const ListTile(
+                  title: Text(
+                    'Selecionar períodos',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    children: [
+                      for (final p in _periodos)
+                        ListTile(
+                          leading: Checkbox(
+                            value: _selecionados.contains(p),
+                            onChanged: (_) {
+                              _togglePeriodo(p);
+                              setSheetState(() {});
+                            },
+                          ),
+                          title: Text(_labelPeriodo(p)),
+                          onTap: () {
+                            _togglePeriodo(p);
+                            setSheetState(() {});
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   void _handleClearAll() {
     showDialog(
@@ -92,14 +162,19 @@ class _ConfiguracaoScreenState extends State<ConfiguracaoScreen> {
   }
 
   void _handleClearPeriodo() {
-    final sel = _selecionado;
-    if (sel == null) return;
+    if (_selecionados.isEmpty) return;
+    final periodos = _selecionados.toList()
+      ..sort((a, b) {
+        final y = a.ano.compareTo(b.ano);
+        return y != 0 ? y : a.mes.compareTo(b.mes);
+      });
+    final textoPeriodos = periodos.map(_labelPeriodo).join(', ');
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmar'),
         content: Text(
-          'Deseja apagar os produtos com validade em ${_labelPeriodo(sel)}? '
+          'Deseja apagar os produtos com validade em $textoPeriodos? '
           'Esta acao nao pode ser desfeita.',
         ),
         actions: [
@@ -110,21 +185,21 @@ class _ConfiguracaoScreenState extends State<ConfiguracaoScreen> {
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
-              final n = await _controller.apagarPeriodo(sel.ano, sel.mes);
+              final n = await _controller.apagarPeriodos(periodos);
               if (ctx.mounted) Navigator.pop(ctx);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
                       n > 0
-                          ? '$n produto(s) de ${_labelPeriodo(sel)} apagado(s).'
-                          : 'Nenhum produto em ${_labelPeriodo(sel)}.',
+                          ? '$n produto(s) apagado(s).'
+                          : 'Nenhum produto nos períodos selecionados.',
                     ),
                   ),
                 );
               }
             },
-            child: const Text('Apagar Periodo'),
+            child: const Text('Apagar Períodos'),
           ),
         ],
       ),
@@ -192,35 +267,34 @@ class _ConfiguracaoScreenState extends State<ConfiguracaoScreen> {
                   style: TextStyle(fontSize: 13, color: AppColors.textMuted),
                 )
               else ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.primary),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<({int ano, int mes})>(
-                      isExpanded: true,
-                      value: _selecionado,
-                      icon: const Icon(
-                        Icons.arrow_drop_down,
-                        color: AppColors.primary,
-                      ),
-                      items: [
-                        for (final p in _periodos)
-                          DropdownMenuItem(
-                            value: p,
-                            child: Text(
-                              _labelPeriodo(p),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textHeading,
-                              ),
+                GestureDetector(
+                  onTap: _showPeriodoSelector,
+                  child: Container(
+                    width: double.infinity,
+                    height: 42,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.primary),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _selecionadosLabel,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textHeading,
                             ),
                           ),
+                        ),
+                        const Icon(
+                          Icons.arrow_drop_down,
+                          color: AppColors.primary,
+                        ),
                       ],
-                      onChanged: (v) => setState(() => _selecionado = v),
                     ),
                   ),
                 ),

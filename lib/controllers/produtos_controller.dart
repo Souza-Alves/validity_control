@@ -5,11 +5,10 @@ import 'base_produto_controller.dart';
 /// Controller da tela de Produtos.
 ///
 /// Oculta da lista os produtos com situação "Vendido" ou "Vencido" e aplica
-/// os filtros por período (data inicial/final) e por dias até o vencimento.
+/// os filtros por período (data inicial/final).
 class ProdutosController extends BaseProdutoController {
   String dataInicial = '';
   String dataFinal = '';
-  String diasFiltro = '';
 
   @override
   List<Produto> get filtered {
@@ -20,12 +19,8 @@ class ProdutosController extends BaseProdutoController {
       if (dataInicial.isNotEmpty && dataFinal.isNotEmpty) {
         return du.isInRange(p.validade, dataInicial, dataFinal);
       }
-      final days = int.tryParse(diasFiltro);
-      if (days != null && days >= 0) {
-        return du.isWithinDays(p.validade, days);
-      }
-      // Sem filtro de data/dias: mostra apenas o mês corrente (data do device).
-      return isMesCorrente(p);
+      // Sem filtro de período: mostra todos os produtos.
+      return true;
     }).toList();
   }
 
@@ -36,11 +31,6 @@ class ProdutosController extends BaseProdutoController {
 
   void setDataFinal(String value) {
     dataFinal = value;
-    notifyListeners();
-  }
-
-  void setDias(String value) {
-    diasFiltro = value;
     notifyListeners();
   }
 

@@ -21,6 +21,7 @@ dependencies:
   connectivity_plus: ^7.1.1
   image_gallery_saver_plus: ^5.0.0
   open_filex_plus: ^4.7.3
+  fl_chart: ^0.70.0
   flutter_email_sender: ^10.0.0
   android_intent_plus: ^6.0.0
 

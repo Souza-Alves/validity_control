@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../controllers/cadastro_controller.dart';
 import '../utils/date_utils.dart' as du;
 import '../theme/app_colors.dart';
+import '../widgets/date_picker_field.dart';
 
 class CadastroScreen extends StatefulWidget {
   const CadastroScreen({super.key});
@@ -201,28 +202,16 @@ class CadastroScreenState extends State<CadastroScreen> {
                 style: TextStyle(fontSize: 14, color: AppColors.textHeading),
               ),
               const SizedBox(height: 4),
-              TextField(
+              DatePickerField(
                 controller: _validadeCtrl,
-                keyboardType: TextInputType.number,
-                maxLength: 10,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'DD/MM/AAAA',
-                  counterText: '',
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
                   ),
                 ),
-                onChanged: (v) {
-                  final masked = du.applyDateMask(v);
-                  if (masked != v) {
-                    _validadeCtrl.value = TextEditingValue(
-                      text: masked,
-                      selection: TextSelection.collapsed(offset: masked.length),
-                    );
-                  }
-                },
               ),
               const SizedBox(height: 8),
               const Text(

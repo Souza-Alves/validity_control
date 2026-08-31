@@ -103,15 +103,19 @@ class ImportarController extends ChangeNotifier {
     final parsed = <ImportRow>[];
     for (var i = 1; i < sheet.rows.length; i++) {
       final row = sheet.rows[i];
-      final predio = row.length > predioIdx
-          ? (row[predioIdx]?.value?.toString() ?? '')
-          : '';
+      final predio = (row.length > predioIdx
+              ? (row[predioIdx]?.value?.toString() ?? '')
+              : '')
+          .trim();
       final qtd = row.length > qtdIdx
-          ? (int.tryParse(row[qtdIdx]?.value?.toString() ?? '') ?? 0)
+          ? (int.tryParse(
+                  (row[qtdIdx]?.value?.toString() ?? '').trim()) ??
+              0)
           : 0;
-      final prod = row.length > prodIdx
-          ? (row[prodIdx]?.value?.toString() ?? '')
-          : '';
+      final prod = (row.length > prodIdx
+              ? (row[prodIdx]?.value?.toString() ?? '')
+              : '')
+          .trim();
       final venc = row.length > vencIdx
           ? parseExcelDate(row[vencIdx]?.value)
           : '';

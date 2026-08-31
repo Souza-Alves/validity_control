@@ -12,6 +12,7 @@ import '../utils/date_utils.dart' as du;
 import '../utils/email_report.dart';
 import '../theme/app_colors.dart';
 import '../controllers/exportar_controller.dart';
+import '../widgets/date_picker_field.dart';
 import '../widgets/loading_indicator.dart';
 import '../widgets/table_header_cell.dart';
 
@@ -141,7 +142,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                TextFormField(
+                DatePickerField(
                   initialValue: editValidade,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
@@ -151,9 +152,6 @@ class _ExportarScreenState extends State<ExportarScreen> {
                       vertical: 8,
                     ),
                   ),
-                  keyboardType: TextInputType.number,
-                  maxLength: 10,
-                  inputFormatters: [du.DateMaskFormatter()],
                   onChanged: (v) => editValidade = v,
                 ),
                 const SizedBox(height: 12),
@@ -788,30 +786,18 @@ class _ExportarScreenState extends State<ExportarScreen> {
                           const SizedBox(height: 2),
                           SizedBox(
                             height: 34,
-                            child: TextField(
+                            child: DatePickerField(
                               controller: _periodoInicioCtrl,
-                              keyboardType: TextInputType.number,
-                              maxLength: 10,
+                              height: 34,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
                                 hintText: 'DD/MM/AAAA',
-                                counterText: '',
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 6,
                                 ),
                               ),
-                              onChanged: (v) {
-                                final masked = du.applyDateMask(v);
-                                if (masked != v) {
-                                  _periodoInicioCtrl.text = masked;
-                                  _periodoInicioCtrl.selection =
-                                      TextSelection.fromPosition(
-                                        TextPosition(offset: masked.length),
-                                      );
-                                }
-                                _c.setPeriodoInicio(masked);
-                              },
+                              onChanged: (v) => _c.setPeriodoInicio(v),
                             ),
                           ),
                         ],
@@ -832,30 +818,18 @@ class _ExportarScreenState extends State<ExportarScreen> {
                           const SizedBox(height: 2),
                           SizedBox(
                             height: 34,
-                            child: TextField(
+                            child: DatePickerField(
                               controller: _periodoFimCtrl,
-                              keyboardType: TextInputType.number,
-                              maxLength: 10,
+                              height: 34,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
                                 hintText: 'DD/MM/AAAA',
-                                counterText: '',
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 6,
                                 ),
                               ),
-                              onChanged: (v) {
-                                final masked = du.applyDateMask(v);
-                                if (masked != v) {
-                                  _periodoFimCtrl.text = masked;
-                                  _periodoFimCtrl.selection =
-                                      TextSelection.fromPosition(
-                                        TextPosition(offset: masked.length),
-                                      );
-                                }
-                                _c.setPeriodoFim(masked);
-                              },
+                              onChanged: (v) => _c.setPeriodoFim(v),
                             ),
                           ),
                         ],
@@ -1123,7 +1097,15 @@ class _ExportarScreenState extends State<ExportarScreen> {
                       setSheetState(() {});
                     },
                   ),
-                  ..._c.locais.where((l) => l.ativo).map((l) {
+                  ..._c.locais.where((l) {
+                    if (!l.ativo) return false;
+                    return _c.produtos.any(
+                      (p) =>
+                          p.localId == l.id ||
+                          p.localNome.toLowerCase() ==
+                              l.nome.toLowerCase(),
+                    );
+                  }).map((l) {
                     final sel = _c.filtrosLocal.contains(l.nome);
                     return ListTile(
                       leading: Checkbox(

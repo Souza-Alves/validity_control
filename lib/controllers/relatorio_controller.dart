@@ -236,7 +236,7 @@ class RelatorioController extends ChangeNotifier {
     resumos = ordenados;
   }
 
-  // ============ Relatório comparativo de vencidos ============
+  // ============ Relatório comparativo ============
 
   /// Qtd de vencidos (Pendente/Baixado) de um local em um período específico.
   int vencidosNoPeriodo(String localNome, Periodo periodo) {
@@ -246,6 +246,28 @@ class RelatorioController extends ChangeNotifier {
               p.localNome == localNome &&
               _isVencido(p) &&
               _noPeriodo(p, periodo),
+        )
+        .fold(0, (s, p) => s + p.quantidade);
+  }
+
+  /// Qtd de vendidos de um local em um período específico.
+  int vendidosNoPeriodo(String localNome, Periodo periodo) {
+    return _allProdutos
+        .where(
+          (p) =>
+              p.localNome == localNome &&
+              p.situacao == 'Vendido' &&
+              _noPeriodo(p, periodo),
+        )
+        .fold(0, (s, p) => s + p.quantidade);
+  }
+
+  /// Qtd total de produtos cadastrados de um local em um período específico.
+  int totalNoPeriodo(String localNome, Periodo periodo) {
+    return _allProdutos
+        .where(
+          (p) =>
+              p.localNome == localNome && _noPeriodo(p, periodo),
         )
         .fold(0, (s, p) => s + p.quantidade);
   }

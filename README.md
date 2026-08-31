@@ -41,16 +41,21 @@ respectivas telas.
 Lista principal de produtos.
 - Filtros por **local** (campo que ocupa toda a largura) e por **dias / período**
   (data inicial e final).
+- O filtro de local exibe **apenas locais ativos que possuem produtos** vinculados.
 - Tabela com colunas **Local · Qtd · Produto · Data (dd/mm)**, com ordenação.
 - **Exibe apenas** produtos cuja situação **não** seja `Vendido` nem `Vencido`.
 - Tocar em uma linha abre o **modal de edição** (alterar local, produto, validade,
   quantidade, situação/status) com confirmação antes de **remover**.
 - **Total** no rodapé somando as **quantidades** dos produtos visíveis.
+- **Gestos de swipe** na lista: arrastar para a direita marca como `Vendido`, arrastar
+  para a esquerda marca como `Vencido - Pendente`.
 - Indicador **"Carregando..."** enquanto os dados são carregados.
 
 ### Cadastro → Produtos
 Formulário para **cadastrar um novo produto**: local, nome, quantidade, validade,
 situação e status (status habilitado somente quando a situação é `Vencido`).
+- Campos de data usam o **seletor nativo de data** (`showDatePicker`).
+- Indicador **"Carregando..."** enquanto os dados são carregados.
 
 ### Cadastro → Locais
 Cadastro e gestão de **locais**: criar, editar nome e ativar/inativar.
@@ -61,6 +66,8 @@ Cadastro e gestão de **locais**: criar, editar nome e ativar/inativar.
 Importa produtos a partir de uma **planilha Excel**.
 - O arquivo deve conter as colunas: `predio`, `quantidade`, `produto`, `vencimento`.
 - Converte a data serial do Excel para `DD/MM/AAAA`.
+- Remove **espaços em branco no início e no fim** dos valores de todas as colunas,
+  evitando duplicação de locais por causa de espaços extras.
 - **Pré-visualização** dos itens antes de confirmar; importação em **lote** (uma
   gravação + uma sincronização ao final).
 - Cria automaticamente os locais únicos a partir da coluna `predio`.
@@ -93,9 +100,40 @@ destaque.
 - Um **card por local** com o **top 5** produtos vencidos daquele local, mostrando
   posição, produto e quantidade.
 
+### Relatórios → Comparativo
+Comparação de produtos entre meses.
+- Seletor de **até 3 meses/anos** via filtro tipo "combo".
+- Filtro por tipo: **Geral**, **Vendidos** e **Vencidos**.
+- Tabela por **local** mostrando os valores de cada mês, com linha de total.
+- **Gráfico de barras geral**: total de registros por mês, independente do local.
+- **Gráficos por local**: barras comparando os locais para `Geral`, `Vendidos` e
+  `Vencidos`.
+- Cards dos gráficos são **recolhíveis**; iniciam recolhidos.
+
+### Relatórios → Geral
+Visão consolidada por local, com o **mês atual** em destaque.
+- **Caixa "Geral (todos os locais)"** recolhível: **Total Geral**,
+  **Vendidos**, **Pendentes** e **Baixados**, somando todos os locais.
+- Um **card por local** (recolhível) com **Total Geral de Produtos** e a quebra em
+  **Vendidos · Pendentes · Baixados**.
+- Todas as contagens são por **quantidade** e **clicáveis**: ao tocar em um número,
+  abre um modal com a **lista dos produtos** daquela contagem, ordenada por quantidade
+  (na caixa Geral o local é exibido em cada item).
+
+### Relatórios → Top Vencidos
+Ranking dos produtos vencidos (status `Pendente` ou `Baixado`), com o **mês atual** em
+-destaque.
++- **Caixa "Geral (todos os locais)"** recolhível: **top 10** produtos mais
+   vencidos de todos os locais, ordenados por quantidade, mostrando posição (1º, 2º, 3º…),
+   produto, **prédio** e quantidade.
+- Um **card por local** (recolhível) com o **top 5** produtos vencidos daquele local,
+   mostrando posição, produto e quantidade.
+
 ### Config
 Configurações do aplicativo.
 - **Apagar Toda a Base**: remove todos os locais e produtos (com confirmação).
+- **Apagar por mês/ano**: permite selecionar um ou mais meses/anos para remover
+  todos os produtos daqueles períodos (com confirmação).
 
 ## Como rodar
 
