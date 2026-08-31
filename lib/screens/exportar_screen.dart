@@ -8,10 +8,13 @@ import 'package:flutter/services.dart';
 import 'package:open_filex_plus/open_filex_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/produto.dart';
-import '../models/local.dart';
-import '../storage/storage.dart';
 import '../utils/date_utils.dart' as du;
-import '../main.dart' show kPrimaryColor;
+import '../utils/email_report.dart';
+import '../theme/app_colors.dart';
+import '../controllers/exportar_controller.dart';
+import '../widgets/date_picker_field.dart';
+import '../widgets/loading_indicator.dart';
+import '../widgets/table_header_cell.dart';
 
 class ExportarScreen extends StatefulWidget {
   const ExportarScreen({super.key});
@@ -21,16 +24,7 @@ class ExportarScreen extends StatefulWidget {
 }
 
 class _ExportarScreenState extends State<ExportarScreen> {
-  List<Produto> _produtos = [];
-  List<Local> _locais = [];
-  final List<String> _filtrosLocal = [];
-  String _filtroCondicao = '';
-  String _filtroStatus = '';
-  String _periodoInicio = '';
-  String _periodoFim = '';
-  String _sortField = 'validade';
-  bool _sortAsc = true;
-  bool _loading = true;
+  late final ExportarController _c;
   final _periodoInicioCtrl = TextEditingController();
   final _periodoFimCtrl = TextEditingController();
   final GlobalKey _captureKey = GlobalKey();
@@ -39,135 +33,329 @@ class _ExportarScreenState extends State<ExportarScreen> {
   @override
   void initState() {
     super.initState();
-    dataChanged.addListener(_handleDataChanged);
-    _loadData();
+    _c = ExportarController()..addListener(_onControllerChanged);
+    _c.load();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadData();
+    _c.load();
   }
 
   @override
   void dispose() {
-    dataChanged.removeListener(_handleDataChanged);
+    _c.removeListener(_onControllerChanged);
+    _c.dispose();
     _periodoInicioCtrl.dispose();
     _periodoFimCtrl.dispose();
     super.dispose();
   }
 
-  void _handleDataChanged() {
-    if (mounted) refresh();
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> refresh() async {
-    await _loadData();
+    await _c.load();
   }
 
-  Future<void> _loadData() async {
-    if (mounted && _produtos.isEmpty) setState(() => _loading = true);
-    final prods = await getProdutos();
-    final locs = await getLocais();
-    if (mounted)
-      setState(() {
-        _produtos = prods;
-        _locais = locs;
-        _loading = false;
-      });
-  }
+  Future<void> _openEditModal(Produto produto) async {
+    final locaisAtivos = _c.locais.where((l) => l.ativo).toList();
+    String editLocalId = produto.localId;
+    String editLocalNome = produto.localNome;
+    String editNome = produto.nome;
+    String editValidade = produto.validade;
+    String editQuantidade = produto.quantidade.toString();
+    String editSituacao = produto.situacao;
+    String editStatus = produto.status;
 
-  bool _isLocalAtivo(Produto p) {
-    for (final l in _locais) {
-      if (l.id == p.localId) return l.ativo;
-    }
-    for (final l in _locais) {
-      if (l.nome.toLowerCase() == p.localNome.toLowerCase()) return l.ativo;
-    }
-    return false;
-  }
-
-  List<Produto> get _filtered {
-    return _produtos.where((p) {
-      if (!_isLocalAtivo(p)) return false;
-      if (_filtrosLocal.isNotEmpty) {
-        if (!_filtrosLocal.any(
-          (f) => p.localNome.toLowerCase() == f.toLowerCase(),
-        ))
-          return false;
-      }
-      if (_filtroCondicao.isNotEmpty && p.situacao != _filtroCondicao)
-        return false;
-      if (_filtroCondicao == 'Vencido' &&
-          _filtroStatus.isNotEmpty &&
-          p.status != _filtroStatus)
-        return false;
-      if (_periodoInicio.isNotEmpty && _periodoFim.isNotEmpty) {
-        final d = du.parseDate(p.validade);
-        final start = du.parseDate(_periodoInicio);
-        final end = du.parseDate(_periodoFim);
-        if (d != null && start != null && end != null) {
-          if (d.isBefore(start) || d.isAfter(end)) return false;
-        }
-      }
-      return true;
-    }).toList();
-  }
-
-  List<Produto> get _sorted {
-    final list = List<Produto>.from(_filtered);
-    list.sort((a, b) {
-      int cmp;
-      switch (_sortField) {
-        case 'local':
-          cmp = a.localNome.compareTo(b.localNome);
-        case 'qtd':
-          cmp = a.quantidade.compareTo(b.quantidade);
-        case 'produto':
-          cmp = a.nome.compareTo(b.nome);
-        case 'situacao':
-          cmp = a.situacao.compareTo(b.situacao);
-        case 'status':
-          cmp = a.status.compareTo(b.status);
-        default:
-          cmp = du.compareDates(a.validade, b.validade);
-      }
-      return _sortAsc ? cmp : -cmp;
-    });
-    return list;
-  }
-
-  void _toggleSort(String field) {
-    setState(() {
-      if (_sortField == field) {
-        _sortAsc = !_sortAsc;
-      } else {
-        _sortField = field;
-        _sortAsc = true;
-      }
-    });
-  }
-
-  String _sortArrow(String field) =>
-      _sortField == field ? (_sortAsc ? ' ▲' : ' ▼') : '';
-
-  void _toggleLocalFilter(String nome) {
-    setState(() {
-      if (_filtrosLocal.contains(nome)) {
-        _filtrosLocal.remove(nome);
-      } else {
-        _filtrosLocal.add(nome);
-      }
-    });
-  }
-
-  String _escapeHtml(String value) {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Editar Produto', textAlign: TextAlign.center),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Localizacao:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  initialValue: locaisAtivos.any((l) => l.id == editLocalId)
+                      ? editLocalId
+                      : null,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  items: locaisAtivos
+                      .map(
+                        (l) =>
+                            DropdownMenuItem(value: l.id, child: Text(l.nome)),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    final loc = locaisAtivos.firstWhere((l) => l.id == v);
+                    setDialogState(() {
+                      editLocalId = loc.id;
+                      editLocalNome = loc.nome;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Produto:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                TextFormField(
+                  initialValue: editNome,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  onChanged: (v) => editNome = v,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Validade:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                DatePickerField(
+                  initialValue: editValidade,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'DD/MM/AAAA',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  onChanged: (v) => editValidade = v,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Quantidade:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                TextFormField(
+                  initialValue: editQuantidade,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) => editQuantidade = v,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Situacao:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  initialValue: editSituacao.isEmpty ? null : editSituacao,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                  ),
+                  hint: const Text('Selecione'),
+                  items: const [
+                    DropdownMenuItem(value: '', child: Text('Nenhum')),
+                    DropdownMenuItem(value: 'Vendido', child: Text('Vendido')),
+                    DropdownMenuItem(value: 'Vencido', child: Text('Vencido')),
+                  ],
+                  onChanged: (v) => setDialogState(() {
+                    editSituacao = v ?? '';
+                    if (editSituacao != 'Vencido') editStatus = '';
+                  }),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Status:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: editSituacao == 'Vencido'
+                        ? AppColors.textSecondary
+                        : AppColors.textDisabled,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  initialValue: editStatus.isEmpty ? null : editStatus,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    enabled: editSituacao == 'Vencido',
+                  ),
+                  hint: Text(
+                    editSituacao == 'Vencido'
+                        ? 'Selecione'
+                        : 'Disponivel apenas para Vencido',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  items: editSituacao == 'Vencido'
+                      ? const [
+                          DropdownMenuItem(value: '', child: Text('Nenhum')),
+                          DropdownMenuItem(
+                            value: 'Baixado',
+                            child: Text('Baixado'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Pendente',
+                            child: Text('Pendente'),
+                          ),
+                        ]
+                      : null,
+                  onChanged: editSituacao == 'Vencido'
+                      ? (v) => setDialogState(() => editStatus = v ?? '')
+                      : null,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () async {
+                        if (editNome.trim().isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Nome do produto e obrigatorio.'),
+                            ),
+                          );
+                          return;
+                        }
+                        if (editValidade.trim().isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Data de validade e obrigatoria.'),
+                            ),
+                          );
+                          return;
+                        }
+                        final qty = int.tryParse(editQuantidade);
+                        if (qty == null || qty < 0) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Quantidade invalida.'),
+                            ),
+                          );
+                          return;
+                        }
+                        await _c.updateProduto(
+                          produto.copyWith(
+                            localId: editLocalId,
+                            localNome: editLocalNome,
+                            nome: editNome,
+                            validade: editValidade,
+                            quantidade: qty,
+                            situacao: editSituacao,
+                            status: editSituacao == 'Vencido' ? editStatus : '',
+                          ),
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                      child: const FittedBox(child: Text('Salvar')),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: AppColors.danger,
+                      ),
+                      onPressed: () {
+                        showDialog(
+                          context: ctx,
+                          builder: (c) => AlertDialog(
+                            title: const Text('Confirmar remoção'),
+                            content: Text(
+                              'Deseja remover o produto "${produto.nome}"?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(c),
+                                child: const FittedBox(child: Text('Cancelar')),
+                              ),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                ),
+                                onPressed: () async {
+                                  await _c.deleteProduto(produto.id);
+                                  if (c.mounted) Navigator.pop(c);
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                },
+                                child: const FittedBox(child: Text('Remover')),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: const FittedBox(child: Text('Remover')),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const FittedBox(child: Text('Cancelar')),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _salvarPrintTela() async {
@@ -213,7 +401,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -223,9 +411,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
             ),
           );
 
-          if (shouldOpenGallery == true &&
-              filePath != null &&
-              filePath.isNotEmpty) {
+          if (shouldOpenGallery == true && filePath.isNotEmpty) {
             try {
               final result = await OpenFilex.open(filePath);
               if (result.type == ResultType.done) {
@@ -289,9 +475,9 @@ class _ExportarScreenState extends State<ExportarScreen> {
   }
 
   Future<void> _handleExport() async {
-    final sorted = _sorted;
+    final sorted = _c.sorted;
     if (sorted.isEmpty) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -299,67 +485,31 @@ class _ExportarScreenState extends State<ExportarScreen> {
             ),
           ),
         );
+      }
       return;
     }
     final today = DateTime.now();
-    final buffer = StringBuffer();
-    buffer.writeln(
-      '<html><body style="font-family: Arial, sans-serif; color: #222; line-height: 1.4;">',
+    final report = buildEmailReport(
+      titulo: 'Relatorio de Produtos - Controle de Validades',
+      data: today,
+      itens: sorted,
     );
-    buffer.writeln(
-      '<p><strong>Relatorio de Produtos - Controle de Validades</strong></p>',
-    );
-    buffer.writeln(
-      '<p style="margin: 0 0 8px 0;">Gerado em ${du.formatDate(today)}</p>',
-    );
-    buffer.writeln(
-      '<table style="border-collapse: collapse; width: 100%; font-size: 12px;">',
-    );
-    buffer.writeln(
-      '<tr style="background-color: #f4f4f4;"><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Local</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Qtd</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Produto</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Validade</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Situacao</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Status</th></tr>',
-    );
-    for (final p in sorted) {
-      buffer.writeln('<tr>');
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.localNome)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${p.quantidade}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.nome)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.validade)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
-      );
-      buffer.writeln('</tr>');
-    }
-    buffer.writeln('</table>');
-    buffer.writeln(
-      '<p style="margin-top: 10px;"><strong>Total:</strong> ${sorted.length} produto(s)</p>',
-    );
-    buffer.writeln('</body></html>');
-
-    final body = buffer.toString();
-    final plainTextBody = [
-      'Controle de Validades',
-      'Relatorio de Produtos',
-      'Gerado em ${du.formatDate(today)}',
-      '',
-      'Local | Qtd | Produto | Validade | Situacao | Status',
-      for (final p in sorted)
-        '${p.localNome} | ${p.quantidade} | ${p.nome} | ${p.validade} | ${p.situacao.isEmpty ? '-' : p.situacao} | ${p.status.isEmpty ? '-' : p.status}',
-      '',
-      'Total: ${sorted.length} produto(s)',
-    ].join('\n');
+    final body = report.html;
+    final plainTextBody = report.plain;
     final subject =
         'Controle de Validades - Relatorio (${du.formatDate(today)})';
+
+    // Android: abre um seletor (chooser) de apps de e-mail. O corpo visivel usa
+    // o HTML "rich" (negrito + quebras), que o Gmail renderiza.
+    if (Platform.isAndroid) {
+      try {
+        final ok = await const MethodChannel('email_sender').invokeMethod<bool>(
+          'sendEmail',
+          {'subject': subject, 'htmlBody': body, 'richBody': report.rich},
+        );
+        if (ok == true) return;
+      } catch (_) {}
+    }
 
     try {
       final capabilities = await FlutterEmailSender.getCapabilities();
@@ -448,12 +598,12 @@ class _ExportarScreenState extends State<ExportarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final sorted = _sorted;
-    final localLabel = _filtrosLocal.isEmpty
+    final sorted = _c.sorted;
+    final localLabel = _c.filtrosLocal.isEmpty
         ? 'Todos'
-        : _filtrosLocal.length <= 2
-        ? _filtrosLocal.join(', ')
-        : '${_filtrosLocal.length} selecionados';
+        : _c.filtrosLocal.length <= 2
+        ? _c.filtrosLocal.join(', ')
+        : '${_c.filtrosLocal.length} selecionados';
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -475,7 +625,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Local:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -489,9 +639,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                 horizontal: 8,
                               ),
                               decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: const Color(0xFFCCCCCC),
-                                ),
+                                border: Border.all(color: AppColors.border),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -512,16 +660,16 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Condicao:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
                           SizedBox(
                             height: 34,
                             child: DropdownButtonFormField<String>(
-                              initialValue: _filtroCondicao.isEmpty
+                              initialValue: _c.filtroCondicao.isEmpty
                                   ? null
-                                  : _filtroCondicao,
+                                  : _c.filtroCondicao,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
                                 contentPadding: EdgeInsets.symmetric(
@@ -549,11 +697,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                   child: Text('Vencido'),
                                 ),
                               ],
-                              onChanged: (v) => setState(() {
-                                _filtroCondicao = v ?? '';
-                                if (_filtroCondicao != 'Vencido')
-                                  _filtroStatus = '';
-                              }),
+                              onChanged: (v) => _c.setFiltroCondicao(v ?? ''),
                             ),
                           ),
                         ],
@@ -568,16 +712,16 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Status:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
                           SizedBox(
                             height: 34,
                             child: DropdownButtonFormField<String>(
-                              initialValue: _filtroStatus.isEmpty
+                              initialValue: _c.filtroStatus.isEmpty
                                   ? null
-                                  : _filtroStatus,
+                                  : _c.filtroStatus,
                               decoration: InputDecoration(
                                 border: const OutlineInputBorder(),
                                 contentPadding: const EdgeInsets.symmetric(
@@ -585,21 +729,21 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                   vertical: 4,
                                 ),
                                 isDense: true,
-                                enabled: _filtroCondicao == 'Vencido',
+                                enabled: _c.filtroCondicao == 'Vencido',
                               ),
                               hint: Text(
-                                _filtroCondicao == 'Vencido'
+                                _c.filtroCondicao == 'Vencido'
                                     ? 'Todos'
                                     : 'Apenas Vencido',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: _filtroCondicao == 'Vencido'
+                                  color: _c.filtroCondicao == 'Vencido'
                                       ? null
-                                      : const Color(0xFFBBBBBB),
+                                      : AppColors.textDisabled,
                                 ),
                               ),
                               isExpanded: true,
-                              items: _filtroCondicao == 'Vencido'
+                              items: _c.filtroCondicao == 'Vencido'
                                   ? const [
                                       DropdownMenuItem(
                                         value: '',
@@ -615,9 +759,8 @@ class _ExportarScreenState extends State<ExportarScreen> {
                                       ),
                                     ]
                                   : null,
-                              onChanged: _filtroCondicao == 'Vencido'
-                                  ? (v) =>
-                                        setState(() => _filtroStatus = v ?? '')
+                              onChanged: _c.filtroCondicao == 'Vencido'
+                                  ? (v) => _c.setFiltroStatus(v ?? '')
                                   : null,
                             ),
                           ),
@@ -637,36 +780,24 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Periodo Inicio:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
                           SizedBox(
                             height: 34,
-                            child: TextField(
+                            child: DatePickerField(
                               controller: _periodoInicioCtrl,
-                              keyboardType: TextInputType.number,
-                              maxLength: 10,
+                              height: 34,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
                                 hintText: 'DD/MM/AAAA',
-                                counterText: '',
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 6,
                                 ),
                               ),
-                              onChanged: (v) {
-                                final masked = du.applyDateMask(v);
-                                if (masked != v) {
-                                  _periodoInicioCtrl.text = masked;
-                                  _periodoInicioCtrl.selection =
-                                      TextSelection.fromPosition(
-                                        TextPosition(offset: masked.length),
-                                      );
-                                }
-                                setState(() => _periodoInicio = masked);
-                              },
+                              onChanged: (v) => _c.setPeriodoInicio(v),
                             ),
                           ),
                         ],
@@ -681,36 +812,24 @@ class _ExportarScreenState extends State<ExportarScreen> {
                             'Periodo Fim:',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF666666),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 2),
                           SizedBox(
                             height: 34,
-                            child: TextField(
+                            child: DatePickerField(
                               controller: _periodoFimCtrl,
-                              keyboardType: TextInputType.number,
-                              maxLength: 10,
+                              height: 34,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
                                 hintText: 'DD/MM/AAAA',
-                                counterText: '',
                                 contentPadding: EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 6,
                                 ),
                               ),
-                              onChanged: (v) {
-                                final masked = du.applyDateMask(v);
-                                if (masked != v) {
-                                  _periodoFimCtrl.text = masked;
-                                  _periodoFimCtrl.selection =
-                                      TextSelection.fromPosition(
-                                        TextPosition(offset: masked.length),
-                                      );
-                                }
-                                setState(() => _periodoFim = masked);
-                              },
+                              onChanged: (v) => _c.setPeriodoFim(v),
                             ),
                           ),
                         ],
@@ -729,14 +848,14 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: kPrimaryColor),
+                  border: Border.all(color: AppColors.primary),
                   color: Colors.white,
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
                     Container(
-                      color: kPrimaryColor,
+                      color: AppColors.primary,
                       padding: const EdgeInsets.symmetric(
                         vertical: 10,
                         horizontal: 4,
@@ -744,137 +863,160 @@ class _ExportarScreenState extends State<ExportarScreen> {
                       child: Row(
                         children: [
                           _headerCell(
-                            'Local${_sortArrow('local')}',
+                            'Local${_c.sortArrow('local')}',
                             2,
-                            () => _toggleSort('local'),
+                            () => _c.toggleSort('local'),
                           ),
                           _headerCell(
-                            'Qtd${_sortArrow('qtd')}',
+                            'Qtd${_c.sortArrow('qtd')}',
                             1,
-                            () => _toggleSort('qtd'),
+                            () => _c.toggleSort('qtd'),
                             align: TextAlign.center,
                           ),
                           _headerCell(
-                            'Produto${_sortArrow('produto')}',
+                            'Produto${_c.sortArrow('produto')}',
                             3,
-                            () => _toggleSort('produto'),
+                            () => _c.toggleSort('produto'),
                           ),
                           _headerCell(
-                            'Data${_sortArrow('validade')}',
+                            'Data${_c.sortArrow('validade')}',
                             2,
-                            () => _toggleSort('validade'),
+                            () => _c.toggleSort('validade'),
                           ),
                           _headerCell(
-                            'Situação${_sortArrow('situacao')}',
+                            'Situação${_c.sortArrow('situacao')}',
                             2,
-                            () => _toggleSort('situacao'),
+                            () => _c.toggleSort('situacao'),
                           ),
                           _headerCell(
-                            'Status${_sortArrow('status')}',
+                            'Status${_c.sortArrow('status')}',
                             2,
-                            () => _toggleSort('status'),
+                            () => _c.toggleSort('status'),
                           ),
                         ],
                       ),
                     ),
                     Expanded(
-                      child: _loading
-                          ? const Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CircularProgressIndicator(
-                                    color: kPrimaryColor,
-                                  ),
-                                  SizedBox(height: 12),
-                                  Text(
-                                    'Carregando...',
-                                    style: TextStyle(color: Color(0xFF999999)),
-                                  ),
-                                ],
-                              ),
-                            )
+                      child: _c.loading
+                          ? const LoadingIndicator()
                           : sorted.isEmpty
                           ? const Center(
                               child: Text(
                                 'Nenhum produto encontrado',
-                                style: TextStyle(color: Color(0xFF999999)),
+                                style: TextStyle(color: AppColors.textMuted),
                               ),
                             )
                           : ListView.builder(
                               itemCount: sorted.length,
                               itemBuilder: (_, i) {
                                 final item = sorted[i];
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    border: Border(
-                                      bottom: BorderSide(
-                                        color: Color(0xFFEEEEEE),
+                                return InkWell(
+                                  onTap: () => _openEditModal(item),
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: AppColors.divider,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                    horizontal: 8,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          item.localNome,
-                                          style: const TextStyle(fontSize: 11),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                      horizontal: 8,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            item.localNome,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 1,
-                                        child: Text(
-                                          '${item.quantidade}',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(fontSize: 11),
+                                        Expanded(
+                                          flex: 1,
+                                          child: Text(
+                                            '${item.quantidade}',
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          item.nome,
-                                          style: const TextStyle(fontSize: 11),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            item.nome,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          du.formatShort(item.validade),
-                                          style: const TextStyle(fontSize: 11),
-                                          maxLines: 1,
-                                          softWrap: false,
-                                          overflow: TextOverflow.visible,
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            du.formatShort(item.validade),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                            maxLines: 1,
+                                            softWrap: false,
+                                            overflow: TextOverflow.visible,
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          item.situacao.isEmpty
-                                              ? '-'
-                                              : item.situacao,
-                                          style: const TextStyle(fontSize: 11),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            item.situacao.isEmpty
+                                                ? '-'
+                                                : item.situacao,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          item.status.isEmpty
-                                              ? '-'
-                                              : item.status,
-                                          style: const TextStyle(fontSize: 11),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            item.status.isEmpty
+                                                ? '-'
+                                                : item.status,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
                             ),
                     ),
+                    if (!_c.loading)
+                      Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 8,
+                        ),
+                        child: Text(
+                          'Total: ${sorted.fold<int>(0, (s, p) => s + p.quantidade)} produto(s)',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -887,7 +1029,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
               children: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(140, 40),
                   ),
@@ -900,7 +1042,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 const Spacer(),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(170, 40),
                   ),
@@ -924,24 +1066,7 @@ class _ExportarScreenState extends State<ExportarScreen> {
     VoidCallback onTap, {
     TextAlign align = TextAlign.left,
   }) {
-    return Expanded(
-      flex: flex,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            text,
-            textAlign: align,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-            ),
-          ),
-        ),
-      ),
-    );
+    return TableHeaderCell(text: text, flex: flex, onTap: onTap, align: align);
   }
 
   void _showLocalFilterSheet() {
@@ -960,26 +1085,34 @@ class _ExportarScreenState extends State<ExportarScreen> {
                 children: [
                   ListTile(
                     leading: Checkbox(
-                      value: _filtrosLocal.isEmpty,
+                      value: _c.filtrosLocal.isEmpty,
                       onChanged: (_) {
-                        setState(() => _filtrosLocal.clear());
+                        _c.clearLocalFilters();
                         setSheetState(() {});
                       },
                     ),
                     title: const Text('Todos'),
                     onTap: () {
-                      setState(() => _filtrosLocal.clear());
+                      _c.clearLocalFilters();
                       setSheetState(() {});
                     },
                   ),
-                  ..._locais.where((l) => l.ativo).map((l) {
-                    final sel = _filtrosLocal.contains(l.nome);
+                  ..._c.locais.where((l) {
+                    if (!l.ativo) return false;
+                    return _c.produtos.any(
+                      (p) =>
+                          p.localId == l.id ||
+                          p.localNome.toLowerCase() ==
+                              l.nome.toLowerCase(),
+                    );
+                  }).map((l) {
+                    final sel = _c.filtrosLocal.contains(l.nome);
                     return ListTile(
                       leading: Checkbox(
                         value: sel,
-                        activeColor: kPrimaryColor,
+                        activeColor: AppColors.primary,
                         onChanged: (_) {
-                          _toggleLocalFilter(l.nome);
+                          _c.toggleLocalFilter(l.nome);
                           setSheetState(() {});
                         },
                       ),
@@ -987,13 +1120,13 @@ class _ExportarScreenState extends State<ExportarScreen> {
                         l.nome,
                         style: sel
                             ? const TextStyle(
-                                color: Color(0xFF4A8A1A),
+                                color: AppColors.primaryDark,
                                 fontWeight: FontWeight.bold,
                               )
                             : null,
                       ),
                       onTap: () {
-                        _toggleLocalFilter(l.nome);
+                        _c.toggleLocalFilter(l.nome);
                         setSheetState(() {});
                       },
                     );

@@ -10,9 +10,20 @@ import '../models/produto.dart';
 import '../supabase/supabase_client.dart';
 import '../utils/id.dart';
 
-const _storageKey = 'controle_validades_data';
-const _queueKey = 'controle_validades_queue';
-const _migratedKey = 'controle_validades_migrated';
+/// Ativado em builds de desenvolvimento via `--dart-define=DEV_MODE=true`.
+/// Em modo dev o app usa tabelas `*_dev` no Supabase e um cache local separado,
+/// isolando totalmente os dados de producao.
+const bool kDevMode = bool.fromEnvironment('DEV_MODE');
+
+const _devSuffix = kDevMode ? '_dev' : '';
+
+const _storageKey = 'controle_validades_data$_devSuffix';
+const _queueKey = 'controle_validades_queue$_devSuffix';
+const _migratedKey = 'controle_validades_migrated$_devSuffix';
+
+// Tabelas do Supabase (produção ou desenvolvimento).
+const _tbLocation = kDevMode ? 'tb_location_dev' : 'tb_location';
+const _tbProducts = kDevMode ? 'tb_products_dev' : 'tb_products';
 
 final ValueNotifier<int> dataChanged = ValueNotifier<int>(0);
 
@@ -49,7 +60,7 @@ class _WorkbookData {
 
 Future<String> _getFilePath() async {
   final dir = await getApplicationDocumentsDirectory();
-  return '${dir.path}/controle_validades.json';
+  return '${dir.path}/controle_validades$_devSuffix.json';
 }
 
 Future<_WorkbookData> _readWorkbook() async {
@@ -82,7 +93,7 @@ Future<void> _writeWorkbook(_WorkbookData data) async {
 
 Future<String> _getQueuePath() async {
   final dir = await getApplicationDocumentsDirectory();
-  return '${dir.path}/controle_validades_queue.json';
+  return '${dir.path}/controle_validades_queue$_devSuffix.json';
 }
 
 Future<List<Map<String, dynamic>>> _readQueue() async {
@@ -178,7 +189,7 @@ Map<String, dynamic> _toDbProduto(Produto p) => {
 };
 
 Produto _fromDbProduto(Map<String, dynamic> r) {
-  final loc = r['tb_location'];
+  final loc = r[_tbLocation];
   final localNome = loc is Map<String, dynamic>
       ? (loc['name'] ?? '').toString()
       : '';
@@ -229,29 +240,29 @@ Future<void> _applyOp(Map<String, dynamic> op) async {
   switch (kind) {
     case 'upsertLocal':
       await supabase
-          .from('tb_location')
+          .from(_tbLocation)
           .upsert(
             _toDbLocal(Local.fromJson(op['data'] as Map<String, dynamic>)),
           );
     case 'deleteLocal':
       await supabase
-          .from('tb_location')
+          .from(_tbLocation)
           .delete()
           .eq('id', int.tryParse(op['id'].toString()) ?? 0);
     case 'upsertProduto':
       await supabase
-          .from('tb_products')
+          .from(_tbProducts)
           .upsert(
             _toDbProduto(Produto.fromJson(op['data'] as Map<String, dynamic>)),
           );
     case 'deleteProduto':
       await supabase
-          .from('tb_products')
+          .from(_tbProducts)
           .delete()
           .eq('id', int.tryParse(op['id'].toString()) ?? 0);
     case 'clearAll':
-      await supabase.from('tb_products').delete().neq('id', 0);
-      await supabase.from('tb_location').delete().neq('id', 0);
+      await supabase.from(_tbProducts).delete().neq('id', 0);
+      await supabase.from(_tbLocation).delete().neq('id', 0);
   }
 }
 
@@ -325,10 +336,10 @@ Future<void> _doSync() async {
     await _writeQueue(current);
   }
 
-  final locaisRes = await supabase.from('tb_location').select('*');
+  final locaisRes = await supabase.from(_tbLocation).select('*');
   final produtosRes = await supabase
-      .from('tb_products')
-      .select('*, tb_location(name)');
+      .from(_tbProducts)
+      .select('*, $_tbLocation(name)');
 
   // Reverifica a fila antes de sobrescrever o cache: se novas ops foram
   // enfileiradas durante o fetch, pula a sobrescrita para não esconder
@@ -344,7 +355,14 @@ Future<void> _doSync() async {
         .map((e) => _fromDbProduto(e as Map<String, dynamic>))
         .toList(),
   );
-  await _writeWorkbook(fresh);
+  // So reescreve e notifica a UI quando o servidor traz algo diferente do
+  // cache, evitando recarregamentos em loop a cada ciclo de sync.
+  final freshJson = jsonEncode(fresh.toJson());
+  final currentJson = jsonEncode((await _readWorkbook()).toJson());
+  if (freshJson != currentJson) {
+    await _writeWorkbook(fresh);
+    _notifyDataChanged();
+  }
 }
 
 Future<void> _ensureSynced({bool force = false}) {
@@ -371,7 +389,9 @@ Future<void> syncNow() => _ensureSynced(force: true);
 // =================== Locais ===================
 
 Future<List<Local>> getLocais() async {
-  await _ensureSynced();
+  // Offline-first: devolve o cache na hora e sincroniza em segundo plano. Ao
+  // terminar, _doSync notifica a UI se houver dados novos do servidor.
+  unawaited(_ensureSynced());
   final data = await _readWorkbook();
   return data.locais;
 }
@@ -423,7 +443,7 @@ Future<void> deleteLocal(String id) async {
 }
 
 Future<List<Local>> getLocaisAtivos() async {
-  await _ensureSynced();
+  unawaited(_ensureSynced());
   final data = await _readWorkbook();
   return data.locais.where((l) => l.ativo).toList();
 }
@@ -431,7 +451,7 @@ Future<List<Local>> getLocaisAtivos() async {
 // =================== Produtos ===================
 
 Future<List<Produto>> getProdutos() async {
-  await _ensureSynced();
+  unawaited(_ensureSynced());
   final data = await _readWorkbook();
   return data.produtos;
 }
@@ -470,20 +490,33 @@ Future<void> addProdutos(List<Produto> newProdutos) async {
   _notifyDataChanged();
 }
 
-/// Grava todos os locais + produtos de uma vez (uma única escrita no cache e
-/// uma única sincronização no final) — usado na importação em massa.
-Future<void> importBatch(List<Local> locais, List<Produto> produtos) async {
+/// Grava em lote os novos locais, os produtos atualizados (ex.: quantidade
+/// somada na importação) e os produtos novos — uma única escrita no cache e uma
+/// única sincronização no final. Usado na importação em massa (merge).
+Future<void> importBatch({
+  required List<Local> novosLocais,
+  required List<Produto> produtosAtualizados,
+  required List<Produto> novosProdutos,
+}) async {
   final data = await _readWorkbook();
-  for (final l in locais) {
+  for (final l in novosLocais) {
     if (!data.locais.any((x) => x.id == l.id)) data.locais.add(l);
   }
-  data.produtos.addAll(produtos);
+  for (final upd in produtosAtualizados) {
+    final i = data.produtos.indexWhere((p) => p.id == upd.id);
+    if (i >= 0) {
+      data.produtos[i] = upd;
+    } else {
+      data.produtos.add(upd);
+    }
+  }
+  data.produtos.addAll(novosProdutos);
   await _writeWorkbook(data);
   final queue = await _readQueue();
-  for (final l in locais) {
+  for (final l in novosLocais) {
     queue.add({'kind': 'upsertLocal', 'data': l.toJson()});
   }
-  for (final p in produtos) {
+  for (final p in [...produtosAtualizados, ...novosProdutos]) {
     queue.add({'kind': 'upsertProduto', 'data': p.toJson()});
   }
   await _writeQueue(queue);
@@ -516,4 +549,50 @@ Future<void> clearAllData() async {
   ]);
   unawaited(_ensureSynced(force: true));
   _notifyDataChanged();
+}
+
+/// Apaga os produtos cuja validade (DD/MM/AAAA) cai no mês/ano informado.
+/// Não remove locais. Retorna a quantidade de produtos removidos.
+Future<int> deleteProdutosPorPeriodo(int ano, int mes) async {
+  final data = await _readWorkbook();
+  final remover = data.produtos.where((p) {
+    final parts = p.validade.split('/');
+    if (parts.length != 3) return false;
+    final m = int.tryParse(parts[1]);
+    final a = int.tryParse(parts[2]);
+    return m == mes && a == ano;
+  }).toList();
+  if (remover.isEmpty) return 0;
+
+  final idsRemover = remover.map((p) => p.id).toSet();
+  data.produtos.removeWhere((p) => idsRemover.contains(p.id));
+  await _writeWorkbook(data);
+
+  final queue = await _readQueue();
+  for (final p in remover) {
+    queue.add({'kind': 'deleteProduto', 'id': p.id});
+  }
+  await _writeQueue(queue);
+  unawaited(_ensureSynced(force: true));
+  _notifyDataChanged();
+  return remover.length;
+}
+
+/// Períodos (ano, mês) presentes nos produtos, mais recentes primeiro.
+Future<List<({int ano, int mes})>> periodosDisponiveis() async {
+  final data = await _readWorkbook();
+  final set = <({int ano, int mes})>{};
+  for (final p in data.produtos) {
+    final parts = p.validade.split('/');
+    if (parts.length != 3) continue;
+    final m = int.tryParse(parts[1]);
+    final a = int.tryParse(parts[2]);
+    if (m != null && a != null) set.add((ano: a, mes: m));
+  }
+  final lista = set.toList()
+    ..sort((x, y) {
+      final c = y.ano.compareTo(x.ano);
+      return c != 0 ? c : y.mes.compareTo(x.mes);
+    });
+  return lista;
 }

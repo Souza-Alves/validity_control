@@ -8,10 +8,13 @@ import 'package:flutter/services.dart';
 import 'package:open_filex_plus/open_filex_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/produto.dart';
-import '../models/local.dart';
-import '../storage/storage.dart';
 import '../utils/date_utils.dart' as du;
-import '../main.dart' show kPrimaryColor;
+import '../utils/email_report.dart';
+import '../theme/app_colors.dart';
+import '../controllers/produtos_controller.dart';
+import '../widgets/date_picker_field.dart';
+import '../widgets/loading_indicator.dart';
+import '../widgets/table_header_cell.dart';
 
 class ProdutosScreen extends StatefulWidget {
   const ProdutosScreen({super.key});
@@ -22,15 +25,7 @@ class ProdutosScreen extends StatefulWidget {
 
 class ProdutosScreenState extends State<ProdutosScreen>
     with AutomaticKeepAliveClientMixin {
-  List<Produto> _produtos = [];
-  List<Local> _locais = [];
-  final List<String> _filtrosLocal = [];
-  String _dataInicial = '';
-  String _dataFinal = '';
-  String _diasFiltro = '';
-  String _sortField = 'validade';
-  bool _sortAsc = true;
-  bool _loading = true;
+  late final ProdutosController _c;
   final _dataInicialCtrl = TextEditingController();
   final _dataFinalCtrl = TextEditingController();
   final GlobalKey _captureKey = GlobalKey();
@@ -42,111 +37,26 @@ class ProdutosScreenState extends State<ProdutosScreen>
   @override
   void initState() {
     super.initState();
-    dataChanged.addListener(_handleDataChanged);
-    _loadData();
+    _c = ProdutosController()..addListener(_onControllerChanged);
+    _c.load();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadData();
+    _c.load();
   }
 
-  void _handleDataChanged() {
-    if (mounted) refresh();
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> refresh() async {
-    await _loadData();
-  }
-
-  Future<void> _loadData() async {
-    if (mounted && _produtos.isEmpty) setState(() => _loading = true);
-    final prods = await getProdutos();
-    final locs = await getLocais();
-    if (mounted)
-      setState(() {
-        _produtos = prods;
-        _locais = locs;
-        _loading = false;
-      });
-  }
-
-  bool _isLocalAtivo(Produto p) {
-    for (final l in _locais) {
-      if (l.id == p.localId) return l.ativo;
-    }
-    for (final l in _locais) {
-      if (l.nome.toLowerCase() == p.localNome.toLowerCase()) return l.ativo;
-    }
-    return false;
-  }
-
-  List<Produto> get _filtered {
-    return _produtos.where((p) {
-      if (!_isLocalAtivo(p)) return false;
-      if (_filtrosLocal.isNotEmpty) {
-        if (!_filtrosLocal.any(
-          (f) => p.localNome.toLowerCase() == f.toLowerCase(),
-        ))
-          return false;
-      }
-      if (_dataInicial.isNotEmpty && _dataFinal.isNotEmpty) {
-        return du.isInRange(p.validade, _dataInicial, _dataFinal);
-      }
-      final days = int.tryParse(_diasFiltro);
-      if (days != null && days >= 0) {
-        return du.isWithinDays(p.validade, days);
-      }
-      return true;
-    }).toList();
-  }
-
-  List<Produto> get _sorted {
-    final list = List<Produto>.from(_filtered);
-    list.sort((a, b) {
-      int cmp;
-      switch (_sortField) {
-        case 'local':
-          cmp = a.localNome.compareTo(b.localNome);
-        case 'qtd':
-          cmp = a.quantidade.compareTo(b.quantidade);
-        case 'produto':
-          cmp = a.nome.compareTo(b.nome);
-        default:
-          cmp = du.compareDates(a.validade, b.validade);
-      }
-      return _sortAsc ? cmp : -cmp;
-    });
-    return list;
-  }
-
-  void _toggleSort(String field) {
-    setState(() {
-      if (_sortField == field) {
-        _sortAsc = !_sortAsc;
-      } else {
-        _sortField = field;
-        _sortAsc = true;
-      }
-    });
-  }
-
-  String _sortArrow(String field) =>
-      _sortField == field ? (_sortAsc ? ' ▲' : ' ▼') : '';
-
-  void _toggleLocalFilter(String nome) {
-    setState(() {
-      if (_filtrosLocal.contains(nome)) {
-        _filtrosLocal.remove(nome);
-      } else {
-        _filtrosLocal.add(nome);
-      }
-    });
+    await _c.load();
   }
 
   Future<void> _openEditModal(Produto produto) async {
-    final locaisAtivos = _locais.where((l) => l.ativo).toList();
+    final locaisAtivos = _c.locais.where((l) => l.ativo).toList();
     String editLocalId = produto.localId;
     String editLocalNome = produto.localNome;
     String editNome = produto.nome;
@@ -167,7 +77,10 @@ class ProdutosScreenState extends State<ProdutosScreen>
               children: [
                 const Text(
                   'Localizacao:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
@@ -198,7 +111,10 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 const SizedBox(height: 12),
                 const Text(
                   'Produto:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -215,10 +131,13 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 const SizedBox(height: 12),
                 const Text(
                   'Validade:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                TextFormField(
+                DatePickerField(
                   initialValue: editValidade,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
@@ -228,17 +147,15 @@ class ProdutosScreenState extends State<ProdutosScreen>
                       vertical: 8,
                     ),
                   ),
-                  keyboardType: TextInputType.number,
-                  maxLength: 10,
-                  onChanged: (v) {
-                    final masked = du.applyDateMask(v);
-                    editValidade = masked;
-                  },
+                  onChanged: (v) => editValidade = v,
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   'Quantidade:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -256,7 +173,10 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 const SizedBox(height: 12),
                 const Text(
                   'Situacao:',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
@@ -286,8 +206,8 @@ class ProdutosScreenState extends State<ProdutosScreen>
                   style: TextStyle(
                     fontSize: 13,
                     color: editSituacao == 'Vencido'
-                        ? const Color(0xFF666666)
-                        : const Color(0xFFBBBBBB),
+                        ? AppColors.textSecondary
+                        : AppColors.textDisabled,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -338,7 +258,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kPrimaryColor,
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                       ),
                       onPressed: () async {
@@ -367,7 +287,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                           );
                           return;
                         }
-                        await updateProduto(
+                        await _c.updateProduto(
                           produto.copyWith(
                             localId: editLocalId,
                             localNome: editLocalNome,
@@ -379,7 +299,6 @@ class ProdutosScreenState extends State<ProdutosScreen>
                           ),
                         );
                         if (ctx.mounted) Navigator.pop(ctx);
-                        _loadData();
                       },
                       child: const FittedBox(child: Text('Salvar')),
                     ),
@@ -387,7 +306,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                     TextButton(
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xFFE74C3C),
+                        backgroundColor: AppColors.danger,
                       ),
                       onPressed: () {
                         showDialog(
@@ -407,10 +326,9 @@ class ProdutosScreenState extends State<ProdutosScreen>
                                   foregroundColor: Colors.red,
                                 ),
                                 onPressed: () async {
-                                  await deleteProduto(produto.id);
+                                  await _c.deleteProduto(produto.id);
                                   if (c.mounted) Navigator.pop(c);
                                   if (ctx.mounted) Navigator.pop(ctx);
-                                  _loadData();
                                 },
                                 child: const FittedBox(child: Text('Remover')),
                               ),
@@ -433,15 +351,6 @@ class ProdutosScreenState extends State<ProdutosScreen>
         ),
       ),
     );
-  }
-
-  String _escapeHtml(String value) {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
   }
 
   Future<void> _salvarPrintTela() async {
@@ -487,7 +396,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -497,9 +406,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
             ),
           );
 
-          if (shouldOpenGallery == true &&
-              filePath != null &&
-              filePath.isNotEmpty) {
+          if (shouldOpenGallery == true && filePath.isNotEmpty) {
             try {
               final result = await OpenFilex.open(filePath);
               if (result.type == ResultType.done) {
@@ -563,14 +470,9 @@ class ProdutosScreenState extends State<ProdutosScreen>
   }
 
   Future<void> _enviarEmail() async {
-    final today = DateTime.now();
-    final todayStart = DateTime(today.year, today.month, today.day);
-    final futureDate = todayStart.add(const Duration(days: 4));
-
-    final itens = _produtos.where((p) {
-      final d = du.parseDate(p.validade);
-      return d != null && !d.isBefore(todayStart) && !d.isAfter(futureDate);
-    }).toList()..sort((a, b) => a.localNome.compareTo(b.localNome));
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final itens = _c.proximosVencimentos(4);
 
     if (itens.isEmpty) {
       if (mounted) {
@@ -583,62 +485,27 @@ class ProdutosScreenState extends State<ProdutosScreen>
       return;
     }
 
-    final buffer = StringBuffer();
-    buffer.writeln(
-      '<html><body style="font-family: Arial, sans-serif; color: #222; line-height: 1.4;">',
+    final report = buildEmailReport(
+      titulo: 'Produtos proximos ao vencimento',
+      data: todayStart,
+      itens: itens,
     );
-    buffer.writeln('<p><strong>Produtos proximos ao vencimento:</strong></p>');
-    buffer.writeln(
-      '<p style="margin: 0 0 8px 0;">Gerado em ${du.formatDate(todayStart)}</p>',
-    );
-    buffer.writeln(
-      '<table style="border-collapse: collapse; width: 100%; font-size: 12px;">',
-    );
-    buffer.writeln(
-      '<tr style="background-color: #f4f4f4;"><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Local</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Qtd</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Produto</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Validade</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Situacao</th><th style="border: 1px solid #ccc; padding: 6px; text-align: left;">Status</th></tr>',
-    );
-    for (final p in itens) {
-      buffer.writeln('<tr>');
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.localNome)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${p.quantidade}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.nome)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.validade)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.situacao.isEmpty ? '-' : p.situacao)}</td>',
-      );
-      buffer.writeln(
-        '<td style="border: 1px solid #ccc; padding: 6px;">${_escapeHtml(p.status.isEmpty ? '-' : p.status)}</td>',
-      );
-      buffer.writeln('</tr>');
-    }
-    buffer.writeln('</table>');
-    buffer.writeln(
-      '<p style="margin-top: 10px;"><strong>Total:</strong> ${itens.length} produto(s)</p>',
-    );
-    buffer.writeln('</body></html>');
-
-    final body = buffer.toString();
-    final plainTextBody = [
-      'Controle de Validades',
-      'Produtos proximos ao vencimento',
-      'Gerado em ${du.formatDate(todayStart)}',
-      '',
-      'Local | Qtd | Produto | Validade | Situacao | Status',
-      for (final p in itens)
-        '${p.localNome} | ${p.quantidade} | ${p.nome} | ${p.validade} | ${p.situacao.isEmpty ? '-' : p.situacao} | ${p.status.isEmpty ? '-' : p.status}',
-      '',
-      'Total: ${itens.length} produto(s)',
-    ].join('\n');
+    final body = report.html;
+    final plainTextBody = report.plain;
     final subject =
         'Controle de Validades - Produtos proximos ao vencimento (${du.formatDate(todayStart)})';
+
+    // Android: abre um seletor (chooser) de apps de e-mail. O corpo visivel usa
+    // o HTML "rich" (negrito + quebras), que o Gmail renderiza.
+    if (Platform.isAndroid) {
+      try {
+        final ok = await const MethodChannel('email_sender').invokeMethod<bool>(
+          'sendEmail',
+          {'subject': subject, 'htmlBody': body, 'richBody': report.rich},
+        );
+        if (ok == true) return;
+      } catch (_) {}
+    }
 
     try {
       final capabilities = await FlutterEmailSender.getCapabilities();
@@ -728,12 +595,12 @@ class ProdutosScreenState extends State<ProdutosScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final sorted = _sorted;
-    final localLabel = _filtrosLocal.isEmpty
+    final sorted = _c.sorted;
+    final localLabel = _c.filtrosLocal.isEmpty
         ? 'Todos'
-        : _filtrosLocal.length <= 2
-        ? _filtrosLocal.join(', ')
-        : '${_filtrosLocal.length} selecionados';
+        : _c.filtrosLocal.length <= 2
+        ? _c.filtrosLocal.join(', ')
+        : '${_c.filtrosLocal.length} selecionados';
 
     return SafeArea(
       child: GestureDetector(
@@ -746,74 +613,34 @@ class ProdutosScreenState extends State<ProdutosScreen>
               padding: const EdgeInsets.all(12),
               child: Column(
                 children: [
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Local:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF666666),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            GestureDetector(
-                              onTap: () => _showLocalFilterSheet(),
-                              child: Container(
-                                width: double.infinity,
-                                height: 34,
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: const Color(0xFFCCCCCC),
-                                  ),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  localLabel,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                          ],
+                      const Text(
+                        'Local:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Dias:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF666666),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            SizedBox(
-                              height: 34,
-                              child: TextField(
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  hintText: '4',
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 6,
-                                  ),
-                                ),
-                                onChanged: (v) =>
-                                    setState(() => _diasFiltro = v),
-                              ),
-                            ),
-                          ],
+                      const SizedBox(height: 2),
+                      GestureDetector(
+                        onTap: () => _showLocalFilterSheet(),
+                        child: Container(
+                          width: double.infinity,
+                          height: 34,
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            localLabel,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ],
@@ -829,36 +656,24 @@ class ProdutosScreenState extends State<ProdutosScreen>
                               'Data Inicial:',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF666666),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 2),
                             SizedBox(
                               height: 34,
-                              child: TextField(
+                              child: DatePickerField(
                                 controller: _dataInicialCtrl,
-                                keyboardType: TextInputType.number,
-                                maxLength: 10,
+                                height: 34,
                                 decoration: const InputDecoration(
                                   border: OutlineInputBorder(),
                                   hintText: 'DD/MM/AAAA',
-                                  counterText: '',
                                   contentPadding: EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 6,
                                   ),
                                 ),
-                                onChanged: (v) {
-                                  final masked = du.applyDateMask(v);
-                                  if (masked != v) {
-                                    _dataInicialCtrl.text = masked;
-                                    _dataInicialCtrl.selection =
-                                        TextSelection.fromPosition(
-                                          TextPosition(offset: masked.length),
-                                        );
-                                  }
-                                  setState(() => _dataInicial = masked);
-                                },
+                                onChanged: (v) => _c.setDataInicial(v),
                               ),
                             ),
                           ],
@@ -873,36 +688,24 @@ class ProdutosScreenState extends State<ProdutosScreen>
                               'Data Final:',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF666666),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 2),
                             SizedBox(
                               height: 34,
-                              child: TextField(
+                              child: DatePickerField(
                                 controller: _dataFinalCtrl,
-                                keyboardType: TextInputType.number,
-                                maxLength: 10,
+                                height: 34,
                                 decoration: const InputDecoration(
                                   border: OutlineInputBorder(),
                                   hintText: 'DD/MM/AAAA',
-                                  counterText: '',
                                   contentPadding: EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 6,
                                   ),
                                 ),
-                                onChanged: (v) {
-                                  final masked = du.applyDateMask(v);
-                                  if (masked != v) {
-                                    _dataFinalCtrl.text = masked;
-                                    _dataFinalCtrl.selection =
-                                        TextSelection.fromPosition(
-                                          TextPosition(offset: masked.length),
-                                        );
-                                  }
-                                  setState(() => _dataFinal = masked);
-                                },
+                                onChanged: (v) => _c.setDataFinal(v),
                               ),
                             ),
                           ],
@@ -924,14 +727,14 @@ class ProdutosScreenState extends State<ProdutosScreen>
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: kPrimaryColor),
+                    border: Border.all(color: AppColors.primary),
                     color: Colors.white,
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
                       Container(
-                        color: kPrimaryColor,
+                        color: AppColors.primary,
                         padding: const EdgeInsets.symmetric(
                           vertical: 10,
                           horizontal: 4,
@@ -939,123 +742,190 @@ class ProdutosScreenState extends State<ProdutosScreen>
                         child: Row(
                           children: [
                             _headerCell(
-                              'Local${_sortArrow('local')}',
+                              'Local${_c.sortArrow('local')}',
                               3,
-                              () => _toggleSort('local'),
+                              () => _c.toggleSort('local'),
                             ),
                             _headerCell(
-                              'Qtd${_sortArrow('qtd')}',
+                              'Qtd${_c.sortArrow('qtd')}',
                               1,
-                              () => _toggleSort('qtd'),
+                              () => _c.toggleSort('qtd'),
                               align: TextAlign.center,
                             ),
                             _headerCell(
-                              'Produto${_sortArrow('produto')}',
+                              'Produto${_c.sortArrow('produto')}',
                               4,
-                              () => _toggleSort('produto'),
+                              () => _c.toggleSort('produto'),
                             ),
                             _headerCell(
-                              'Data${_sortArrow('validade')}',
+                              'Data${_c.sortArrow('validade')}',
                               2,
-                              () => _toggleSort('validade'),
+                              () => _c.toggleSort('validade'),
                               align: TextAlign.right,
                             ),
                           ],
                         ),
                       ),
                       Expanded(
-                        child: _loading
-                            ? const Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    CircularProgressIndicator(
-                                      color: kPrimaryColor,
-                                    ),
-                                    SizedBox(height: 12),
-                                    Text(
-                                      'Carregando...',
-                                      style: TextStyle(
-                                        color: Color(0xFF999999),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
+                        child: _c.loading
+                            ? const LoadingIndicator()
                             : sorted.isEmpty
                             ? const Center(
                                 child: Text(
                                   'Nenhum produto encontrado',
-                                  style: TextStyle(color: Color(0xFF999999)),
+                                  style: TextStyle(color: AppColors.textMuted),
                                 ),
                               )
                             : ListView.builder(
                                 itemCount: sorted.length,
                                 itemBuilder: (_, i) {
                                   final item = sorted[i];
-                                  return InkWell(
-                                    onTap: () => _openEditModal(item),
-                                    child: Container(
-                                      decoration: const BoxDecoration(
-                                        border: Border(
-                                          bottom: BorderSide(
-                                            color: Color(0xFFEEEEEE),
+                                  return Dismissible(
+                                    key: ValueKey(item.id),
+                                    direction: DismissDirection.horizontal,
+                                    confirmDismiss: (direction) async {
+                                      final ctx = context;
+                                      if (direction ==
+                                          DismissDirection.startToEnd) {
+                                        await _c.updateProduto(
+                                          item.copyWith(situacao: 'Vendido'),
+                                        );
+                                        if (mounted) {
+                                          // ignore: use_build_context_synchronously
+                                          ScaffoldMessenger.of(ctx).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${item.nome} marcado como Vendido',
+                                              ),
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        await _c.updateProduto(
+                                          item.copyWith(
+                                            situacao: 'Vencido',
+                                            status: 'Pendente',
+                                          ),
+                                        );
+                                        if (mounted) {
+                                          // ignore: use_build_context_synchronously
+                                          ScaffoldMessenger.of(ctx).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${item.nome} marcado como Vencido - Pendente',
+                                              ),
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                      return true;
+                                    },
+                                    background: Container(
+                                      color: AppColors.primary,
+                                      alignment: Alignment.centerLeft,
+                                      padding: const EdgeInsets.only(left: 16),
+                                      child: const Icon(
+                                        Icons.check_circle,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    secondaryBackground: Container(
+                                      color: AppColors.danger,
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: const Icon(
+                                        Icons.warning,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    child: InkWell(
+                                      onTap: () => _openEditModal(item),
+                                      child: Container(
+                                        decoration: const BoxDecoration(
+                                          border: Border(
+                                            bottom: BorderSide(
+                                              color: AppColors.divider,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8,
-                                        horizontal: 8,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              item.localNome,
-                                              style: const TextStyle(
-                                                fontSize: 11,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                          horizontal: 8,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 3,
+                                              child: Text(
+                                                item.localNome,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          Expanded(
-                                            flex: 1,
-                                            child: Text(
-                                              '${item.quantidade}',
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                fontSize: 11,
+                                            Expanded(
+                                              flex: 1,
+                                              child: Text(
+                                                '${item.quantidade}',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          Expanded(
-                                            flex: 4,
-                                            child: Text(
-                                              item.nome,
-                                              style: const TextStyle(
-                                                fontSize: 11,
+                                            Expanded(
+                                              flex: 4,
+                                              child: Text(
+                                                item.nome,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              du.formatShort(item.validade),
-                                              textAlign: TextAlign.right,
-                                              style: const TextStyle(
-                                                fontSize: 11,
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                du.formatShort(item.validade),
+                                                textAlign: TextAlign.right,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   );
                                 },
                               ),
                       ),
+                      if (!_c.loading)
+                        Container(
+                          width: double.infinity,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: AppColors.primary),
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 8,
+                          ),
+                          child: Text(
+                            'Total: ${sorted.fold<int>(0, (s, p) => s + p.quantidade)} produto(s)',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -1068,7 +938,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                 children: [
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryColor,
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(140, 40),
                     ),
@@ -1081,7 +951,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
                   const Spacer(),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryColor,
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(170, 40),
                     ),
@@ -1106,24 +976,7 @@ class ProdutosScreenState extends State<ProdutosScreen>
     VoidCallback onTap, {
     TextAlign align = TextAlign.left,
   }) {
-    return Expanded(
-      flex: flex,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            text,
-            textAlign: align,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-            ),
-          ),
-        ),
-      ),
-    );
+    return TableHeaderCell(text: text, flex: flex, onTap: onTap, align: align);
   }
 
   void _showLocalFilterSheet() {
@@ -1152,26 +1005,34 @@ class ProdutosScreenState extends State<ProdutosScreen>
                     children: [
                       ListTile(
                         leading: Checkbox(
-                          value: _filtrosLocal.isEmpty,
+                          value: _c.filtrosLocal.isEmpty,
                           onChanged: (_) {
-                            setState(() => _filtrosLocal.clear());
+                            _c.clearLocalFilters();
                             setSheetState(() {});
                           },
                         ),
                         title: const Text('Todos'),
                         onTap: () {
-                          setState(() => _filtrosLocal.clear());
+                          _c.clearLocalFilters();
                           setSheetState(() {});
                         },
                       ),
-                      ..._locais.where((l) => l.ativo).map((l) {
-                        final sel = _filtrosLocal.contains(l.nome);
+                      ..._c.locais.where((l) {
+                        if (!l.ativo) return false;
+                        return _c.produtos.any(
+                          (p) =>
+                              p.localId == l.id ||
+                              p.localNome.toLowerCase() ==
+                                  l.nome.toLowerCase(),
+                        );
+                      }).map((l) {
+                        final sel = _c.filtrosLocal.contains(l.nome);
                         return ListTile(
                           leading: Checkbox(
                             value: sel,
-                            activeColor: kPrimaryColor,
+                            activeColor: AppColors.primary,
                             onChanged: (_) {
-                              _toggleLocalFilter(l.nome);
+                              _c.toggleLocalFilter(l.nome);
                               setSheetState(() {});
                             },
                           ),
@@ -1179,13 +1040,13 @@ class ProdutosScreenState extends State<ProdutosScreen>
                             l.nome,
                             style: sel
                                 ? const TextStyle(
-                                    color: Color(0xFF4A8A1A),
+                                    color: AppColors.primaryDark,
                                     fontWeight: FontWeight.bold,
                                   )
                                 : null,
                           ),
                           onTap: () {
-                            _toggleLocalFilter(l.nome);
+                            _c.toggleLocalFilter(l.nome);
                             setSheetState(() {});
                           },
                         );
@@ -1204,7 +1065,8 @@ class ProdutosScreenState extends State<ProdutosScreen>
 
   @override
   void dispose() {
-    dataChanged.removeListener(_handleDataChanged);
+    _c.removeListener(_onControllerChanged);
+    _c.dispose();
     _dataInicialCtrl.dispose();
     _dataFinalCtrl.dispose();
     super.dispose();

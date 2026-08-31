@@ -1,17 +1,191 @@
-# controle_validades
+# Controle de Validades
 
-A new Flutter project.
+Aplicativo Flutter para **controle de validade de produtos** distribuídos por locais
+(prédios/setores). Permite cadastrar locais e produtos, importar planilhas Excel,
+acompanhar o que está vendido/vencido, exportar e enviar relatórios por e-mail, e
+visualizar um relatório consolidado por local.
 
-## Getting Started
+Funciona em **modo offline-first**: os dados ficam em cache local e são sincronizados
+com o **Supabase** assim que há conexão (ao abrir telas e ao reconectar). Quando está
+sem internet, um aviso é exibido e as alterações são enfileiradas para subir depois.
 
-This project is a starting point for a Flutter application.
+## Stack
 
-A few resources to get you started if this is your first Flutter project:
+- **Flutter** (Android, iOS e Web)
+- **Supabase** (backend online) com sincronização offline (`connectivity_plus`)
+- Tabelas: `tb_location` e `tb_products` (IDs `int8`)
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Arquitetura (MVC)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Model / Dados**: `lib/models/`, `lib/storage/`, `lib/supabase/`
+- **Controller**: `lib/controllers/` (lógica das telas via `ChangeNotifier`)
+- **View**: `lib/screens/`, `lib/widgets/`, `lib/theme/`
+
+## Conceitos
+
+- **Local**: área de armazenamento (ex.: prédio/loja). Pode estar ativo ou inativo.
+- **Produto**: item com quantidade, validade (DD/MM/AAAA), situação e status.
+- **Situação**: `Vendido` ou `Vencido`.
+- **Status** (apenas para `Vencido`): `Baixado` ou `Pendente`.
+
+## Navegação (menu inferior)
+
+`Produtos` · `Cadastro` · `Dados` · `Relatórios` · `Config`
+
+Os itens **Cadastro**, **Dados** e **Relatórios** abrem um submenu (bottom sheet) com as
+respectivas telas.
+
+## Funcionalidades por tela
+
+### Produtos
+Lista principal de produtos.
+- Filtros por **local** (campo que ocupa toda a largura) e por **dias / período**
+  (data inicial e final).
+- O filtro de local exibe **apenas locais ativos que possuem produtos** vinculados.
+- Tabela com colunas **Local · Qtd · Produto · Data (dd/mm)**, com ordenação.
+- **Exibe apenas** produtos cuja situação **não** seja `Vendido` nem `Vencido`.
+- Tocar em uma linha abre o **modal de edição** (alterar local, produto, validade,
+  quantidade, situação/status) com confirmação antes de **remover**.
+- **Total** no rodapé somando as **quantidades** dos produtos visíveis.
+- **Gestos de swipe** na lista: arrastar para a direita marca como `Vendido`, arrastar
+  para a esquerda marca como `Vencido - Pendente`.
+- Indicador **"Carregando..."** enquanto os dados são carregados.
+
+### Cadastro → Produtos
+Formulário para **cadastrar um novo produto**: local, nome, quantidade, validade,
+situação e status (status habilitado somente quando a situação é `Vencido`).
+- Campos de data usam o **seletor nativo de data** (`showDatePicker`).
+- Indicador **"Carregando..."** enquanto os dados são carregados.
+
+### Cadastro → Locais
+Cadastro e gestão de **locais**: criar, editar nome e ativar/inativar.
+- Renomear um local **propaga** o novo nome para os produtos vinculados.
+- Produtos de locais **inativos** não aparecem nas listas e nos combos de filtro.
+
+### Dados → Importação
+Importa produtos a partir de uma **planilha Excel**.
+- O arquivo deve conter as colunas: `predio`, `quantidade`, `produto`, `vencimento`.
+- Converte a data serial do Excel para `DD/MM/AAAA`.
+- Remove **espaços em branco no início e no fim** dos valores de todas as colunas,
+  evitando duplicação de locais por causa de espaços extras.
+- **Pré-visualização** dos itens antes de confirmar; importação em **lote** (uma
+  gravação + uma sincronização ao final).
+- Cria automaticamente os locais únicos a partir da coluna `predio`.
+
+### Dados → Exportar
+Lista completa para exportação/relatório.
+- **Exibe tudo** (inclusive `Vendido` e `Vencido`), com filtros de local e período.
+- Tabela com fonte reduzida: **Local · Qtd · Produto · Data (dd/mm) · Situação · Status**.
+- Tocar em uma linha abre o **mesmo modal de edição** da tela de Produtos.
+- **Enviar por e-mail**: abre o app de e-mail (com seletor quando há mais de um app no
+  Android) com o corpo em **tabela HTML** no mesmo estilo/colunas da tela.
+- **Total** no rodapé somando as quantidades.
+
+### Relatórios → Geral
+Visão consolidada por local, com o **mês atual** em destaque.
+- **Caixa "Geral (todos os locais)"** logo abaixo do mês: **Total Geral**,
+  **Vendidos**, **Pendentes** e **Baixados**, somando todos os locais.
+- Um **card por local** com **Total Geral de Produtos** e a quebra em
+  **Vendidos · Pendentes · Baixados**.
+- Todas as contagens são por **quantidade** e **clicáveis**: ao tocar em um número,
+  abre um modal com a **lista dos produtos** daquela contagem, ordenada por quantidade
+  (na caixa Geral o local é exibido em cada item).
+
+### Relatórios → Top Vencidos
+Ranking dos produtos vencidos (status `Pendente` ou `Baixado`), com o **mês atual** em
+destaque.
+- **Caixa "Geral (todos os locais)"** logo abaixo do mês: **top 10** produtos mais
+  vencidos de todos os locais, ordenados por quantidade, mostrando posição (1º, 2º, 3º…),
+  produto, **prédio** e quantidade.
+- Um **card por local** com o **top 5** produtos vencidos daquele local, mostrando
+  posição, produto e quantidade.
+
+### Relatórios → Comparativo
+Comparação de produtos entre meses.
+- Seletor de **até 3 meses/anos** via filtro tipo "combo".
+- Filtro por tipo: **Geral**, **Vendidos** e **Vencidos**.
+- Tabela por **local** mostrando os valores de cada mês, com linha de total.
+- **Gráfico de barras geral**: total de registros por mês, independente do local.
+- **Gráficos por local**: barras comparando os locais para `Geral`, `Vendidos` e
+  `Vencidos`.
+- Cards dos gráficos são **recolhíveis**; iniciam recolhidos.
+
+### Relatórios → Geral
+Visão consolidada por local, com o **mês atual** em destaque.
+- **Caixa "Geral (todos os locais)"** recolhível: **Total Geral**,
+  **Vendidos**, **Pendentes** e **Baixados**, somando todos os locais.
+- Um **card por local** (recolhível) com **Total Geral de Produtos** e a quebra em
+  **Vendidos · Pendentes · Baixados**.
+- Todas as contagens são por **quantidade** e **clicáveis**: ao tocar em um número,
+  abre um modal com a **lista dos produtos** daquela contagem, ordenada por quantidade
+  (na caixa Geral o local é exibido em cada item).
+
+### Relatórios → Top Vencidos
+Ranking dos produtos vencidos (status `Pendente` ou `Baixado`), com o **mês atual** em
+-destaque.
++- **Caixa "Geral (todos os locais)"** recolhível: **top 10** produtos mais
+   vencidos de todos os locais, ordenados por quantidade, mostrando posição (1º, 2º, 3º…),
+   produto, **prédio** e quantidade.
+- Um **card por local** (recolhível) com o **top 5** produtos vencidos daquele local,
+   mostrando posição, produto e quantidade.
+
+### Config
+Configurações do aplicativo.
+- **Apagar Toda a Base**: remove todos os locais e produtos (com confirmação).
+- **Apagar por mês/ano**: permite selecionar um ou mais meses/anos para remover
+  todos os produtos daqueles períodos (com confirmação).
+
+## Como rodar
+
+```bash
+flutter pub get
+flutter run            # device/emulador
+flutter run -d chrome  # web
+```
+
+### Build do APK
+
+O app tem dois modos de compilação, controlados pela flag `--dart-define=DEV_MODE`:
+
+- **Produção** (padrão): usa as tabelas `tb_location` / `tb_products` do Supabase e o
+  cache local padrão. Nome do app: **Controle de Validades**
+  (`com.controlevalidades.controle_validades`).
+- **Desenvolvimento** (`DEV_MODE=true`): usa as tabelas `tb_location_dev` /
+  `tb_products_dev` e um cache local separado, sem afetar os dados de produção. Mostra
+  um banner **MODO DESENVOLVEDOR** e instala como um app distinto — nome **Validades DEV**
+  (`com.controlevalidades.controle_validades.dev`) — permitindo ter os dois apps no
+  mesmo device.
+
+**APK de PRODUÇÃO** (padrão, sem `DEV_MODE`, com ofuscação do Dart + R8/ProGuard):
+
+```bash
+flutter build apk --release --obfuscate --split-debug-info=build/debug-info
+```
+Saída: `build/app/outputs/flutter-apk/app-release.apk`.
+(Guarde a pasta `build/debug-info/` para conseguir ler stack traces de produção depois.)
+
+> Importante: não use a flag `--dart-define=DEV_MODE=true` para gerar o APK que será
+> enviado aos usuários. O modo desenvolvedor muda as tabelas/cache e exibe o banner
+> `MODO DESENVOLVEDOR`.
+
+**APK de DESENVOLVIMENTO**:
+
+```bash
+flutter build apk --release --dart-define=DEV_MODE=true
+```
+Para rodar direto no device/emulador em modo dev:
+```bash
+flutter run --dart-define=DEV_MODE=true
+```
+
+**Web**:
+
+```bash
+flutter build web --release
+```
+
+### Qualidade
+
+```bash
+flutter analyze
+```
