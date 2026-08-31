@@ -156,13 +156,17 @@ O app tem dois modos de compilação, controlados pela flag `--dart-define=DEV_M
   (`com.controlevalidades.controle_validades.dev`) — permitindo ter os dois apps no
   mesmo device.
 
-**APK de PRODUÇÃO** (com ofuscação do Dart + R8/ProGuard):
+**APK de PRODUÇÃO** (padrão, sem `DEV_MODE`, com ofuscação do Dart + R8/ProGuard):
 
 ```bash
 flutter build apk --release --obfuscate --split-debug-info=build/debug-info
 ```
 Saída: `build/app/outputs/flutter-apk/app-release.apk`.
 (Guarde a pasta `build/debug-info/` para conseguir ler stack traces de produção depois.)
+
+> Importante: não use a flag `--dart-define=DEV_MODE=true` para gerar o APK que será
+> enviado aos usuários. O modo desenvolvedor muda as tabelas/cache e exibe o banner
+> `MODO DESENVOLVEDOR`.
 
 **APK de DESENVOLVIMENTO**:
 
